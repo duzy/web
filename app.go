@@ -9,24 +9,34 @@ import (
         "template"
 )
 
+// Make response to a request.
 type Handler interface {
         WriteResponse(w io.Writer, app *App)
 }
 
+// Produce a new web.App to talk to a session.
+func NewApp(title string) (app *App) {
+        app = new(App)
+        app.handlers = make(map[string]Handler)
+        app.title = title
+        app.pathMatcher = DefaultPathMatcher(false)
+        return
+}
+
+// Indicate a CGI web session, also holds parameters of a request.
 type App struct {
         handlers map[string]Handler
         title string
         method string
         path string
+        pathMatcher PathMatcher
         query map[string][]string
+        //Header map[string]string
 }
 
-func NewApp(title string) (app *App) {
-        app = new(App)
-        app.handlers = make(map[string]Handler)
-        app.title = title
-        return
-}
+func (app *App) Method() string { return app.method }
+func (app *App) Path() string { return app.path }
+func (app *App) Query(k string) []string { return app.query[k] }
 
 func (app *App) Handle(url string, h Handler) {
         app.handlers[url] = h
@@ -46,7 +56,7 @@ func (app *App) Exec() (err os.Error) {
         defer w.Flush()
 
         for k, h := range app.handlers {
-                if !pathMatched(k, app.path) { continue }
+                if !app.pathMatcher.PathMatched(k, app.path) { continue }
                 h.WriteResponse(w, app)
         }
 
@@ -54,36 +64,43 @@ finish:
         return
 }
 
-func pathMatched(lhs string, rhs string) (matched bool) {
-        matched = false
-        if lhs == rhs { matched = true }
-        return
+// Responsible to check two paths to see if they are identical. 
+type PathMatcher interface {
+        PathMatched(p1 string, p2 string) bool
 }
 
-type view struct {
-        model Model
+// The default method of matching two path: matched if equal
+type DefaultPathMatcher bool
+
+func (m DefaultPathMatcher) PathMatched(p1 string, p2 string) bool {
+        m = DefaultPathMatcher(p1 == p2)
+        return bool(m)
 }
 
-type Model interface {
-        GetTemplate() string
-        MakeFields(app *App) (map[string]string)
-}
-
+// Produce a new web view(a web.Handler).
 func NewView(a interface{}) (h Handler) {
-        v := new(view)
+        v := new(View)
         h = Handler(v)
         switch t := a.(type) {
         case string:
-                dv := new(DefaultView)
-                dv.Template = t
-                v.model = Model(dv)
+                /*
+                 dv := new(DefaultView)
+                 dv.Template = t
+                 v.model = Model(dv)
+                 */
+                v.model = Model(DefaultView{t,nil})
         case Model:
                 v.model = t;
         }
         return
 }
 
-func (v *view) WriteResponse(w io.Writer, app *App) {
+// Real representation of a web view, it's a web.Handler.
+type View struct {
+        model Model // this is private field
+}
+
+func (v *View) WriteResponse(w io.Writer, app *App) {
         fmt.Fprintf(w, "Content-Type: text/html;\n\n")
 
         if v.model.GetTemplate() == "" { goto finish }
@@ -98,6 +115,13 @@ finish:
         return
 }
 
+// A Model is a true implementation of a web view.
+type Model interface {
+        GetTemplate() string
+        MakeFields(app *App) (map[string]string)
+}
+
+// The default Model of a view.
 type DefaultView struct {
         Template string
         Fields map[string]string
@@ -117,6 +141,7 @@ func (v DefaultView) MakeFields(app *App) (m map[string]string) {
         return 
 }
 
+// Use FuncHandler to wrap a func as a web.Handler.
 type FuncHandler func(w io.Writer, app *App)
 
 func (f FuncHandler) WriteResponse(w io.Writer, app *App) {
