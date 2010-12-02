@@ -1,16 +1,16 @@
 package dusell
 
-import "../web"
+import "../_obj/web"
 
 type homePage struct {
         web.DefaultView // embed fields and methods of web.DefaultView
 }
 
-func MakeHomePage(tpl string) (model web.Model) {
+func MakeHomePage(tpl string) (model web.ViewModel) {
         //home := homePage{ web.DefaultView{tpl,nil} }
         home := new(homePage)
         home.Template = tpl
-        model = web.Model(home)
+        model = web.ViewModel(home)
         return
 }
 
