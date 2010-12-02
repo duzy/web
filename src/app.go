@@ -6,7 +6,7 @@ import (
         "fmt"
         "http"
         "bytes"
-        "bufio"
+        //"bufio"
 )
 
 // Make response to a request.
@@ -102,21 +102,19 @@ func (app *App) Exec() (err os.Error) {
         app.query, err = http.ParseQuery(app.model.QueryString())
         if err != nil { /* TODO: log error */ goto finish }
 
-        contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
-
         for k, h := range app.handlers {
                 if app.pathMatcher.PathMatched(k, app.path) {
+                        contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
                         contentBuffer.Reset()
                         h.WriteContent(contentBuffer, app)
 
-                        w, err := bufio.NewWriterSize(app.model.ResponseWriter(), 1024*10)
-                        if err != nil { /*TODO: IO error */ goto finish }
+                        headerBuffer := bytes.NewBuffer(make([]byte, 1024))
+                        headerBuffer.Reset()
+                        err := app.writeHeader(headerBuffer)
+                        if err != nil { /*TODO: error */ goto finish }
 
-                        defer w.Flush()
-
-                        err = app.writeHeader(w)
-                        if err != nil { /*TODO: IO error */ goto finish }
-
+                        w := app.model.ResponseWriter()
+                        w.Write(headerBuffer.Bytes())
                         w.Write(contentBuffer.Bytes())
                         break
                 }
