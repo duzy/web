@@ -12,7 +12,7 @@ var counters map[string]int = make(map[string]int)
 
 func SayHello(w io.Writer, app *web.App) {
         counters["hello"] += 1
-        fmt.Fprintf(w, "Content-Type: text/plain\n\n")
+        app.SetHeader("Content-Type", "text/plain")
         fmt.Fprintf(w, "hello: %d\n", counters["hello"])
 }
 
@@ -20,9 +20,9 @@ type SaveSomething struct {
         text string
 }
 
-func (this *SaveSomething) WriteResponse(w io.Writer, app *web.App) {
+func (this *SaveSomething) WriteContent(w io.Writer, app *web.App) {
         counters["save"] += 1
-        fmt.Fprintf(w, "Content-Type: text/html\n\n")
+        app.SetHeader("Content-Type", "text/html")
         fmt.Fprintf(w, "save a posted message...(%d)\n", counters["save"])
 }
 

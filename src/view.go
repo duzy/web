@@ -2,7 +2,8 @@ package web
 
 import (
         "io"
-        "fmt"
+        //"os"
+        //"fmt"
         "template"
 )
 
@@ -23,8 +24,10 @@ type View struct {
         model ViewModel // this is private field
 }
 
-func (v *View) WriteResponse(w io.Writer, app *App) {
-        fmt.Fprintf(w, "Content-Type: text/html;\n\n")
+func (v *View) WriteContent(w io.Writer, app *App) {
+        app.SetHeader("Content-Type", "text/html")
+
+        //os.Stdout.WriteString(app.Header("Content-Type"))
 
         if v.model.GetTemplate() == "" { goto finish }
 

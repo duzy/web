@@ -3,6 +3,6 @@
     && gopack grc _obj/web.a _obj/web.8 \
     && 8g -o _obj/test.8 test.go \
     && 8l -o test _obj/test.8 \
-    && ./test
+    && ./test $@
 
 #    && gopack grc _obj/web.a _obj/cgi.8 \

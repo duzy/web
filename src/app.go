@@ -5,18 +5,19 @@ import (
         "io"
         "fmt"
         "http"
+        "bytes"
         "bufio"
 )
 
 // Make response to a request.
 type Handler interface {
-        WriteResponse(w io.Writer, app *App)
+        WriteContent(w io.Writer, app *App) // TODO: returns error
 }
 
 // Use FuncHandler to wrap a func as a web.Handler.
 type FuncHandler func(w io.Writer, app *App)
 
-func (f FuncHandler) WriteResponse(w io.Writer, app *App) {
+func (f FuncHandler) WriteContent(w io.Writer, app *App) {
         f(w, app)
 }
 
@@ -35,8 +36,9 @@ func NewApp(title string, m interface {}) (app *App) {
         if isAppModel {
                 app = new(App)
                 app.model = am
-                app.handlers = make(map[string]Handler)
                 app.title = title
+                app.handlers = make(map[string]Handler)
+                app.header = make(map[string]string)
                 app.pathMatcher = DefaultPathMatcher(false)
         }
         return
@@ -51,12 +53,20 @@ type App struct {
         path string
         pathMatcher PathMatcher
         query map[string][]string
-        //Header map[string]string
+        header map[string]string
 }
 
 func (app *App) Method() string { return app.method }
 func (app *App) Path() string { return app.path }
 func (app *App) Query(k string) []string { return app.query[k] }
+
+func (app *App) Header(k string) string { return app.header[k] }
+func (app *App) SetHeader(k, v string) (prev string) {
+        prev = app.header[k]
+        app.header[k] = v
+        return
+}
+
 
 func (app *App) Handle(url string, h Handler) (prev Handler) {
         prev = app.handlers[url]
@@ -77,18 +87,39 @@ func (app *App) ReturnError(w io.Writer, err os.Error) {
         fmt.Fprintf(w, "error: %v", err)
 }
 
+func (app *App) writeHeader(w io.Writer) (err os.Error) {
+        for k, v := range app.header {
+                //fmt.Fprintf(os.Stdout, "%s: %s\n", k, v)
+                fmt.Fprintf(w, "%s: %s\n", k, v)
+        }
+        fmt.Fprintf(w, "\n")
+        return
+}
+
 func (app *App) Exec() (err os.Error) {
         app.method = app.model.RequestMethod()
         app.path = app.model.PathInfo()
         app.query, err = http.ParseQuery(app.model.QueryString())
         if err != nil { /* TODO: log error */ goto finish }
 
-        w, err := bufio.NewWriterSize(app.model.ResponseWriter(), 1024*10)
-        defer w.Flush()
+        contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
 
         for k, h := range app.handlers {
-                if !app.pathMatcher.PathMatched(k, app.path) { continue }
-                h.WriteResponse(w, app)
+                if app.pathMatcher.PathMatched(k, app.path) {
+                        contentBuffer.Reset()
+                        h.WriteContent(contentBuffer, app)
+
+                        w, err := bufio.NewWriterSize(app.model.ResponseWriter(), 1024*10)
+                        if err != nil { /*TODO: IO error */ goto finish }
+
+                        defer w.Flush()
+
+                        err = app.writeHeader(w)
+                        if err != nil { /*TODO: IO error */ goto finish }
+
+                        w.Write(contentBuffer.Bytes())
+                        break
+                }
         }
 
 finish:
