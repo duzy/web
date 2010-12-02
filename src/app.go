@@ -13,6 +13,13 @@ type Handler interface {
         WriteResponse(w io.Writer, app *App)
 }
 
+// Use FuncHandler to wrap a func as a web.Handler.
+type FuncHandler func(w io.Writer, app *App)
+
+func (f FuncHandler) WriteResponse(w io.Writer, app *App) {
+        f(w, app)
+}
+
 // Indicate a model of a app, e.g. CGIModel, FCGIModel, SCGIModel, etc.
 type AppModel interface {
         RequestMethod() string
@@ -71,11 +78,6 @@ func (app *App) ReturnError(w io.Writer, err os.Error) {
 }
 
 func (app *App) Exec() (err os.Error) {
-        /*
-        app.method = os.Getenv("REQUEST_METHOD")
-        app.path = os.Getenv("PATH_INFO")
-        app.query, err = http.ParseQuery(os.Getenv("QUERY_STRING"))
-         */
         app.method = app.model.RequestMethod()
         app.path = app.model.PathInfo()
         app.query, err = http.ParseQuery(app.model.QueryString())
@@ -104,11 +106,4 @@ type DefaultPathMatcher bool
 func (m DefaultPathMatcher) PathMatched(p1 string, p2 string) bool {
         m = DefaultPathMatcher(p1 == p2)
         return bool(m)
-}
-
-// Use FuncHandler to wrap a func as a web.Handler.
-type FuncHandler func(w io.Writer, app *App)
-
-func (f FuncHandler) WriteResponse(w io.Writer, app *App) {
-        f(w, app)
 }
