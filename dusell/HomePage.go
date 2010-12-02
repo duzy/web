@@ -6,10 +6,14 @@ type homePage struct {
         web.DefaultView // embed fields and methods of web.DefaultView
 }
 
-func MakeHomePage(tpl string) (model web.ViewModel) {
-        //home := homePage{ web.DefaultView{tpl,nil} }
-        home := new(homePage)
-        home.Template = tpl
+var home *homePage // Singleton object.
+
+// Get the singleton homePage object.
+func GetHomePage() (model web.ViewModel) {
+        if home == nil {
+                home = &homePage{ web.DefaultView{ TemplateHomePage, nil } }
+        }
+
         model = web.ViewModel(home)
         return
 }

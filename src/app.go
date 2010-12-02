@@ -89,7 +89,6 @@ func (app *App) ReturnError(w io.Writer, err os.Error) {
 
 func (app *App) writeHeader(w io.Writer) (err os.Error) {
         for k, v := range app.header {
-                //fmt.Fprintf(os.Stdout, "%s: %s\n", k, v)
                 fmt.Fprintf(w, "%s: %s\n", k, v)
         }
         fmt.Fprintf(w, "\n")
@@ -104,6 +103,7 @@ func (app *App) Exec() (err os.Error) {
 
         for k, h := range app.handlers {
                 if app.pathMatcher.PathMatched(k, app.path) {
+                        // TODO: rethink about the buffering performance
                         contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
                         contentBuffer.Reset()
                         h.WriteContent(contentBuffer, app)

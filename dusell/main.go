@@ -1,13 +1,21 @@
 package main
 
-import "./dusell"
-import "../_obj/web"
+import (
+        "../_obj/web"
+        "./_obj/dusell"
+)
 
 func main() {
-        home := dusell.MakeHomePage("home.tpl")
-        homeView := web.NewView(home)
+        homeView := web.NewView(dusell.GetHomePage())
+
         app := web.NewApp("DuSell.com", web.NewCGIModel())
-        app.Handle("", homeView)
-        app.Handle("/home", homeView)
+        app.HandleDefault(homeView)
+        //app.Handle("/order", OrderHandler)
+        //app.Handle("/pay", PaymentHandler)
+        //app.Handle("/cats", CatalogsHandler)
+        //app.Handle("/cat", GetItemList)
+        //app.Handle("/get_item", GetItem)
+        //app.Handle("/signin", SigninHandler)
+        //app.Handle("/signup", SignupHandler)
         app.Exec()
 }
