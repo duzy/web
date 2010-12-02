@@ -111,9 +111,9 @@ func (m DefaultPathMatcher) PathMatched(p1 string, p2 string) bool {
 func NewView(a interface{}) (h Handler) {
         switch t := a.(type) {
         case string:
-                m := Model(&DefaultView{ t, nil })
+                m := ViewModel(&DefaultView{ t, nil })
                 h = Handler(&View{ m })
-        case Model:
+        case ViewModel:
                 h = Handler(&View{ t })
         }
         return
@@ -121,7 +121,7 @@ func NewView(a interface{}) (h Handler) {
 
 // Real representation of a web view, it's a web.Handler.
 type View struct {
-        model Model // this is private field
+        model ViewModel // this is private field
 }
 
 func (v *View) WriteResponse(w io.Writer, app *App) {
@@ -139,8 +139,8 @@ finish:
         return
 }
 
-// A Model is a true implementation of a web view.
-type Model interface {
+// A ViewModel is a true implementation of a web view.
+type ViewModel interface {
         GetTemplate() string
         MakeFields(app *App) (map[string]string)
 }
