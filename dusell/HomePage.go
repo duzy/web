@@ -18,6 +18,6 @@ func GetHomePage() web.ViewModel { return web.ViewModel(home) }
 func (h *homePage) MakeFields(app *web.App) (fields interface{}) {
         fields = h.StandardFields.MakeFields(app)
         names := []string{ "name1", "name2", "name3" }
-        h.StandardFields.SetField("names", names)
+        h.StandardFields["names"] = names
         return
 }

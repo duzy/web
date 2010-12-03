@@ -59,17 +59,6 @@ func (sf *StandardFields) MakeFields(app *App) interface{} {
         return sf
 }
 
-func (sf *StandardFields) SetField(k string, f interface{}) (prev interface{}) {
-        prev = (*sf)[k]
-        (*sf)[k] = f
-        return
-}
-
-func (sf *StandardFields) GetField(k string) (f interface{}) {
-        f = (*sf)[k]
-        return
-}
-
 // The standard ViewModel of a view.
 type StandardView struct {
         TemplateName
