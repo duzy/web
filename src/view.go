@@ -44,13 +44,13 @@ finish:
 // A ViewModel is a true implementation of a web view.
 type ViewModel interface {
         GetTemplate() string
-        MakeFields(app *App) (map[string]string)
+        MakeFields(app *App) interface{}
 }
 
 // The default Model of a view.
 type DefaultView struct {
         Template string
-        Fields map[string]string
+        Fields map[string]interface{}
 }
 
 func (v DefaultView) GetTemplate() (s string) {
@@ -58,11 +58,11 @@ func (v DefaultView) GetTemplate() (s string) {
         return
 }
 
-func (v DefaultView) MakeFields(app *App) (m map[string]string) {
+func (v DefaultView) MakeFields(app *App) (m interface{}) {
         if v.Fields == nil {
-                v.Fields = make(map[string]string)
+                v.Fields = make(map[string]interface{})
                 v.Fields["title"] = app.title
         }
-        m = v.Fields
+        m = &v.Fields
         return 
 }

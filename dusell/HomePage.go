@@ -18,8 +18,12 @@ func GetHomePage() (model web.ViewModel) {
         return
 }
 
-func (home *homePage) MakeFields(app *web.App) (fields map[string]string) {
+func (home *homePage) MakeFields(app *web.App) (fields interface{}) {
         fields = home.DefaultView.MakeFields(app)
-        // TODO: ...
+        if m, ok := fields.(map[string]interface{}); ok {
+                // TODO: ...
+                names := []string{ "name1", "name2", "name3" }
+                m["names"] = names
+        }
         return
 }

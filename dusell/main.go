@@ -6,17 +6,22 @@ import (
         "flag"
 )
 
+var flagPath = flag.String("path", "", "Set PATH_INFO for debug.")
+
+func setupCGIModel(model web.AppModel) {
+        if cgi, ok := model.(*web.CGIModel); ok {
+                if *flagPath != "" { cgi.Setenv("PATH_INFO", *flagPath) }
+        }
+}
+
 func main() {
-        flagPath := flag.String("path", "", "Set PATH_INFO for debug.")
         flag.Parse()
 
         homeView := web.NewView(dusell.GetHomePage())
 
         model := web.NewCGIModel()
 
-        if cgi, ok := model.(*web.CGIModel); ok {
-                if *flagPath != "" { cgi.Setenv("PATH_INFO", *flagPath) }
-        }
+        setupCGIModel(model)
 
         app := web.NewApp("DuSell.com", model)
         app.HandleDefault(homeView)
