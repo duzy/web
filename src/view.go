@@ -12,8 +12,8 @@ func NewView(a interface{}) (h Handler) {
         switch t := a.(type) {
         case string:
                 m := ViewModel(&StandardView{
-                        ViewTemplateName{ t },
-                        StandardFields{ nil },
+                        TemplateName(t),
+                        make(StandardFields),
                 })
                 h = Handler(&View{ m })
         case ViewModel:
@@ -48,34 +48,30 @@ type ViewModel interface {
         MakeFields(app *App) interface{}
 }
 
-type ViewTemplateName struct { Template string }
+type TemplateName string
 
-func (v *ViewTemplateName) GetTemplate() string { return v.Template }
+func (v *TemplateName) GetTemplate() string { return string(*v) }
 
-type StandardFields struct { Fields map[string]interface{} }
+type StandardFields map[string]interface{}
 
-func (sf *StandardFields) MakeFields(app *App) (m interface{}) {
-        if sf.Fields == nil {
-                sf.Fields = make(map[string]interface{})
-        }
-        sf.Fields["title"] = app.title
-        m = &sf.Fields
-        return 
+func (sf *StandardFields) MakeFields(app *App) interface{} {
+        (*sf)["title"] = app.title
+        return sf
 }
 
 func (sf *StandardFields) SetField(k string, f interface{}) (prev interface{}) {
-        prev = sf.Fields[k]
-        sf.Fields[k] = f
+        prev = (*sf)[k]
+        (*sf)[k] = f
         return
 }
 
 func (sf *StandardFields) GetField(k string) (f interface{}) {
-        f = sf.Fields[k]
+        f = (*sf)[k]
         return
 }
 
 // The standard ViewModel of a view.
 type StandardView struct {
-        ViewTemplateName
+        TemplateName
         StandardFields
 }

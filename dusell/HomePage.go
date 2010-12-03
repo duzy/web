@@ -3,13 +3,13 @@ package dusell
 import "../_obj/web"
 
 type homePage struct {
-        web.ViewTemplateName
+        web.TemplateName
         web.StandardFields
 }
 
 var home *homePage = &homePage{
-        web.ViewTemplateName{ TemplateHomePage },
-        web.StandardFields{ nil },
+        web.TemplateName(TemplateHomePage),
+        make(web.StandardFields),
 }
 
 // Get the singleton homePage object.
