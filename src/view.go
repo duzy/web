@@ -11,7 +11,10 @@ import (
 func NewView(a interface{}) (h Handler) {
         switch t := a.(type) {
         case string:
-                m := ViewModel(&DefaultView{ t, nil })
+                m := ViewModel(&StandardView{
+                        ViewTemplateName{ t },
+                        StandardFields{ nil },
+                })
                 h = Handler(&View{ m })
         case ViewModel:
                 h = Handler(&View{ t })
@@ -26,8 +29,6 @@ type View struct {
 
 func (v *View) WriteContent(w io.Writer, app *App) {
         app.SetHeader("Content-Type", "text/html")
-
-        //os.Stdout.WriteString(app.Header("Content-Type"))
 
         if v.model.GetTemplate() == "" { goto finish }
 
@@ -47,22 +48,34 @@ type ViewModel interface {
         MakeFields(app *App) interface{}
 }
 
-// The default Model of a view.
-type DefaultView struct {
-        Template string
-        Fields map[string]interface{}
+type ViewTemplateName struct { Template string }
+
+func (v *ViewTemplateName) GetTemplate() string { return v.Template }
+
+type StandardFields struct { Fields map[string]interface{} }
+
+func (sf *StandardFields) MakeFields(app *App) (m interface{}) {
+        if sf.Fields == nil {
+                sf.Fields = make(map[string]interface{})
+        }
+        sf.Fields["title"] = app.title
+        m = &sf.Fields
+        return 
 }
 
-func (v DefaultView) GetTemplate() (s string) {
-        s = v.Template
+func (sf *StandardFields) SetField(k string, f interface{}) (prev interface{}) {
+        prev = sf.Fields[k]
+        sf.Fields[k] = f
         return
 }
 
-func (v DefaultView) MakeFields(app *App) (m interface{}) {
-        if v.Fields == nil {
-                v.Fields = make(map[string]interface{})
-                v.Fields["title"] = app.title
-        }
-        m = &v.Fields
-        return 
+func (sf *StandardFields) GetField(k string) (f interface{}) {
+        f = sf.Fields[k]
+        return
+}
+
+// The standard ViewModel of a view.
+type StandardView struct {
+        ViewTemplateName
+        StandardFields
 }

@@ -3,27 +3,21 @@ package dusell
 import "../_obj/web"
 
 type homePage struct {
-        web.DefaultView // embed fields and methods of web.DefaultView
+        web.ViewTemplateName
+        web.StandardFields
 }
 
-var home *homePage // Singleton object.
+var home *homePage = &homePage{
+        web.ViewTemplateName{ TemplateHomePage },
+        web.StandardFields{ nil },
+}
 
 // Get the singleton homePage object.
-func GetHomePage() (model web.ViewModel) {
-        if home == nil {
-                home = &homePage{ web.DefaultView{ TemplateHomePage, nil } }
-        }
+func GetHomePage() web.ViewModel { return web.ViewModel(home) }
 
-        model = web.ViewModel(home)
-        return
-}
-
-func (home *homePage) MakeFields(app *web.App) (fields interface{}) {
-        fields = home.DefaultView.MakeFields(app)
-        if m, ok := fields.(map[string]interface{}); ok {
-                // TODO: ...
-                names := []string{ "name1", "name2", "name3" }
-                m["names"] = names
-        }
+func (h *homePage) MakeFields(app *web.App) (fields interface{}) {
+        fields = h.StandardFields.MakeFields(app)
+        names := []string{ "name1", "name2", "name3" }
+        h.StandardFields.SetField("names", names)
         return
 }

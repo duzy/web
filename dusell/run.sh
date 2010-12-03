@@ -1,4 +1,3 @@
-
 GOFILES="names.go HomePage.go"
 
 ([[ -d _obj ]] || mkdir -p _obj) \
