@@ -30,20 +30,6 @@ type AppModel interface {
         ResponseWriter() io.Writer
 }
 
-// Produce a new web.App to talk to a session.
-func NewApp(title string, m interface {}) (app *App) {
-        am, isAppModel := m.(AppModel)
-        if isAppModel {
-                app = new(App)
-                app.model = am
-                app.title = title
-                app.handlers = make(map[string]Handler)
-                app.header = make(map[string]string)
-                app.pathMatcher = DefaultPathMatcher(false)
-        }
-        return
-}
-
 // Indicate a CGI web session, also holds parameters of a request.
 type App struct {
         model AppModel
@@ -56,9 +42,23 @@ type App struct {
         header map[string]string
 }
 
+// Produce a new web.App to talk to a session.
+func NewApp(title string, m interface {}) (app *App) {
+        if am, ok := m.(AppModel); ok {
+                app = new(App)
+                app.model = am
+                app.title = title
+                app.handlers = make(map[string]Handler)
+                app.header = make(map[string]string)
+                app.pathMatcher = DefaultPathMatcher(false)
+        }
+        return
+}
+
 func (app *App) Method() string { return app.method }
 func (app *App) Path() string { return app.path }
 func (app *App) Query(k string) []string { return app.query[k] }
+func (app *App) RequestReader() io.Reader { return app.model.RequestReader() }
 
 func (app *App) Header(k string) string { return app.header[k] }
 func (app *App) SetHeader(k, v string) (prev string) {

@@ -5,6 +5,7 @@ import (
         "io"
         "fmt"
         "flag"
+        "bytes"
         "./_obj/web"
 )
 
@@ -23,7 +24,16 @@ type SaveSomething struct {
 func (this *SaveSomething) WriteContent(w io.Writer, app *web.App) {
         counters["save"] += 1
         app.SetHeader("Content-Type", "text/html")
-        fmt.Fprintf(w, "save a posted message...(%d)\n", counters["save"])
+
+        r := app.RequestReader()
+        msg := bytes.NewBuffer(make([]byte, 0))
+        n, err := io.Copy(msg, r)
+        if err != nil {
+                //...
+        }
+
+        fmt.Fprintf(w, "posted message(%d): [%d]%s\n", counters["save"],
+                n, string(msg.Bytes()))
 }
 
 var path = flag.String("path", "", "specify a test PATH_INFO")
