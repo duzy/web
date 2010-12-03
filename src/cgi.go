@@ -5,26 +5,45 @@ import (
         "io"
 )
 
+// Implements AppModel for CGI web.App.
+type CGIModel struct {
+        overides map[string]string
+}
+
 func NewCGIModel() (m AppModel) {
-        cgi := new(CGIModel)
+        cgi := &CGIModel{ make(map[string]string) }
         m = AppModel(cgi)
         return
 }
 
-// Implements AppModel for CGI web.App.
-type CGIModel struct {
+func (cgi *CGIModel) Getenv(k string) (v string) {
+        v = cgi.overides[k]
+        if v == "" {
+                v = os.Getenv(k)
+        }
+        return
 }
 
+func (cgi *CGIModel) Setenv(k, v string) (prev string) {
+        prev = cgi.overides[k]
+        if prev == "" {
+                prev = os.Getenv(k)
+        }
+        cgi.overides[k] = v
+        return
+}
+
+
 func (cgi *CGIModel) RequestMethod() string {
-        return os.Getenv("REQUEST_METHOD")
+        return cgi.Getenv("REQUEST_METHOD")
 }
 
 func (cgi *CGIModel) PathInfo() string {
-        return os.Getenv("PATH_INFO")
+        return cgi.Getenv("PATH_INFO")
 }
 
 func (cgi *CGIModel) QueryString() string {
-        return os.Getenv("QUERY_STRING")
+        return cgi.Getenv("QUERY_STRING")
 }
 
 func (cgi *CGIModel) ResponseWriter() (w io.Writer) {
@@ -36,3 +55,4 @@ func (cgi *CGIModel) RequestReader() (r io.Reader) {
         r = os.Stdin
         return
 }
+

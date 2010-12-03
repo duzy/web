@@ -6,4 +6,4 @@ GOFILES="names.go HomePage.go"
     && gopack grc _obj/dusell.a _obj/dusell.8 \
     && 8g -o _obj/main.8 main.go \
     && 8l -o main _obj/main.8 \
-    && ./main
+    && ./main $@

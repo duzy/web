@@ -36,9 +36,6 @@ func (this *SaveSomething) WriteContent(w io.Writer, app *web.App) {
                 n, string(msg.Bytes()))
 }
 
-var path = flag.String("path", "", "specify a test PATH_INFO")
-var help = flag.Bool("help", false, "show help message")
-
 func printUsage() {
         fmt.Printf(`usage: ./test [-path PATH_INFO]
 where the PATH_INFO may be one of:
@@ -50,6 +47,8 @@ where the PATH_INFO may be one of:
 }
 
 func main() {
+        path := flag.String("path", "", "specify a test PATH_INFO")
+        help := flag.Bool("help", false, "show help message")
         flag.Parse()
 
         if *help {

@@ -67,7 +67,6 @@ func (app *App) SetHeader(k, v string) (prev string) {
         return
 }
 
-
 func (app *App) Handle(url string, h Handler) (prev Handler) {
         prev = app.handlers[url]
         app.handlers[url] = h
