@@ -48,12 +48,12 @@ type ViewModel interface {
         MakeFields(app *App) interface{}
 }
 
+// Part of web.ViewModel implements GetTemplate()
 type TemplateName string
-
 func (v *TemplateName) GetTemplate() string { return string(*v) }
 
+// Part of web.ViewModel, implements MakeFields().
 type StandardFields map[string]interface{}
-
 func (sf *StandardFields) MakeFields(app *App) interface{} {
         (*sf)["title"] = app.title
         return sf
