@@ -6,12 +6,12 @@ import (
 
 type homePage struct {
         title string
-        web.TemplateName
+        web.TemplateFile
 }
 
 var home *homePage = &homePage{
         "Duzy Chan",
-        web.TemplateName(TemplateHomePage),
+        web.TemplateFile(TemplateHomePage),
 }
 func GetHomePage() web.ViewModel { return web.ViewModel(home) }
 

@@ -23,9 +23,8 @@ func main() {
 
         setupCGIModel(model)
 
-        app := web.NewApp("DuSell.com", model)
+        app := web.NewApp("DuSell - find what you want", model)
         app.HandleDefault(homeView)
-        app.Handle("/home", homeView)
         //app.Handle("/order", OrderHandler)
         //app.Handle("/pay", PaymentHandler)
         //app.Handle("/cats", CatalogsHandler)
