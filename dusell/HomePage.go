@@ -23,50 +23,51 @@ func (h *homePage) MakeFields(app *web.App) (fields interface{}) {
         fields = h.StandardFields.MakeFields(app)
         h.StandardFields["keywords"] = "DuSell Online Store"
         h.StandardFields["description"] = "DuSell Online Store do what you buy"
-        h.StandardFields["headline"] = web.NewStringer(headline, app)
-        h.StandardFields["page_content_left"] = web.NewStringer(contentLeft, app)
-        h.StandardFields["page_content_center"] = web.NewStringer(contentCenter, app)
-        h.StandardFields["page_content_right"] = web.NewStringer(contentRight, app)
-        h.StandardFields["page_content_tail"] = web.NewStringer(contentTail, app)
+        h.StandardFields["page-header"] = web.NewStringer(header, app)
+        h.StandardFields["page-content"] = web.NewStringer(content, app)
+        h.StandardFields["page-content-left"] = web.NewStringer(contentLeft, app)
+        h.StandardFields["page-content-right"] = web.NewStringer(contentRight, app)
+        h.StandardFields["page-footer"] = web.NewStringer(footer, app)
         return
 }
 
-var headline = &Headline {
-        "TODO:headline",
+var header = &PageHeader {
+        "TODO:page header",
 }
 
-var contentLeft = &ContentLeft {
-        "TODO:content_left",
+var content = &PageContent {
+        "TODO:page content",
 }
 
-var contentCenter = &ContentCenter {
-        "TODO:content_center",
+var contentLeft = &PageContentLeft {
+        "TODO:page content left",
 }
 
-var contentRight = &ContentRight {
-        "TODO: content_right",
+var contentRight = &PageContentRight {
+        "TODO:page content right",
 }
 
-var contentTail = &ContentTail {
-        "TODO: content_tail",
-}        
+var footer = &PageContent {
+        "TODO:page footer",
+}
 
-type Headline struct {
+type PageHeader struct {
         web.TemplateString
 }
 
-type ContentLeft struct {
+type PageContent struct {
         web.TemplateString
 }
 
-type ContentCenter struct {
+type PageContentLeft struct {
         web.TemplateString
 }
 
-type ContentRight struct {
+type PageContentRight struct {
         web.TemplateString
 }
 
-type ContentTail struct {
+type PageFooter struct {
         web.TemplateString
 }
+
