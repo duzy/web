@@ -54,24 +54,19 @@ var contentTail = &ContentTail {
 type Headline struct {
         web.TemplateString
 }
-func (vm *Headline) MakeFields(app *web.App) interface{} { return vm }
 
 type ContentLeft struct {
         web.TemplateString
 }
-func (vm *ContentLeft) MakeFields(app *web.App) interface{} { return vm }
 
 type ContentCenter struct {
         web.TemplateString
 }
-func (vm *ContentCenter) MakeFields(app *web.App) interface{} { return vm }
 
 type ContentRight struct {
         web.TemplateString
 }
-func (vm *ContentRight) MakeFields(app *web.App) interface{} { return vm }
 
 type ContentTail struct {
         web.TemplateString
 }
-func (vm *ContentTail) MakeFields(app *web.App) interface{} { return vm }

@@ -34,7 +34,14 @@ func (v *View) WriteContent(w io.Writer, app *App) {
         t, err := template.Parse(temp, nil/* TODO: make use of it? */)
         if err != nil { app.ReturnError(w, err); goto finish }
 
-        err = t.Execute( v.model.MakeFields(app), w )
+        var f interface{}
+        if fm, ok := v.model.(FieldsMaker); ok {
+                f = fm.MakeFields(app)
+        } else {
+                f = v.model
+        }
+
+        err = t.Execute( f, w )
         if err != nil { app.ReturnError(w, err); goto finish }
 
 finish:
@@ -69,7 +76,6 @@ func (vs *HandlerStringer) String() string {
 // A ViewModel is a true implementation of a web view.
 type ViewModel interface {
         TemplateGetter
-        FieldsMaker
 }
 
 type TemplateGetter interface { GetTemplate() string }
