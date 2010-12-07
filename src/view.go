@@ -25,6 +25,13 @@ func NewView(a interface{}) (h Handler) {
         return
 }
 
+func (v *View) HandleSubpath(subpath string, app *App) (handled bool) {
+        if sh, ok := v.model.(SubpathHandler); ok {
+                handled = sh.HandleSubpath(subpath, app)
+        }
+        return
+}
+
 func (v *View) WriteContent(w io.Writer, app *App) {
         app.SetHeader("Content-Type", "text/html")
 
@@ -106,6 +113,7 @@ type FieldsMaker interface { MakeFields(app *App) interface{} }
 // Part of web.ViewModel, implements MakeFields().
 type StandardFields map[string]interface{}
 func (sf *StandardFields) MakeFields(app *App) interface{} {
+        (*sf)["SCRIPT"] = app.ScriptName()
         (*sf)["title"] = app.title
         return sf
 }

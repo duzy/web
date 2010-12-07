@@ -46,6 +46,10 @@ func (cgi *CGIModel) QueryString() string {
         return cgi.Getenv("QUERY_STRING")
 }
 
+func (cgi *CGIModel) ScriptName() string {
+        return cgi.Getenv("SCRIPT_NAME")
+}
+
 func (cgi *CGIModel) ResponseWriter() (w io.Writer) {
         w = os.Stdout
         return

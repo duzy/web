@@ -1,4 +1,4 @@
-GOFILES="names.go HomePage.go"
+GOFILES="names.go HomePage.go CPanelPage.go"
 
 ([[ -d _obj ]] || mkdir -p _obj) \
     && 8g -o _obj/dusell.8 $GOFILES \
