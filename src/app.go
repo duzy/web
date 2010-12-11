@@ -129,6 +129,8 @@ func NewApp(title string, m interface {}) (app *App) {
 
                 if shouldMakeNewSession {
                         app.session = NewSession()
+                        // FIXME: app.cookies may be not empty since it's
+                        //        returned by ParseCookies.
                         app.cookies = append(app.cookies, &Cookie{
                         Name: "session",
                         Content: app.session.Id(),
