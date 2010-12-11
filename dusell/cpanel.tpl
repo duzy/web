@@ -13,6 +13,7 @@
         <ul>
           <li><a href="{script}/cp/categories">Categories</a></li>
           <li><a href="{script}/cp/items">Items</a></li>
+          <li><a href="{script}/cp/orders">Orders</a></li>
           <li><a href="{script}/cp/sells">Selling</a></li>
         </ul>
       </div>

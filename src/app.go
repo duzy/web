@@ -114,7 +114,12 @@ func NewApp(title string, m interface {}) (app *App) {
 
                 shouldMakeNewSession := true
 
+                appScriptName := app.ScriptName()
                 app.cookies = ParseCookies(am.HttpCookie())
+                for _, c := range app.cookies {
+                        if c.Path == "" { c.Path = appScriptName }
+                }
+
                 if c := app.Cookie("session"); c != nil {
                         // TODO: check value of c.Name and c.Content
                         sec, err := LoadSession(c.Content)
@@ -134,6 +139,7 @@ func NewApp(title string, m interface {}) (app *App) {
                         app.cookies = append(app.cookies, &Cookie{
                         Name: "session",
                         Content: app.session.Id(),
+                        Path: app.ScriptName(),
                         })
                 }
 

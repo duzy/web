@@ -13,6 +13,8 @@ type SessionPersister interface {
         io.ReadWriteCloser
 }
 
+// Make a new session Persister.
+// The session id (sid) must be more than 5 chars length.
 func NewSessionPersister(sid string) (p SessionPersister, err os.Error) {
         fs := &FSSessionPersister{}
 
@@ -131,4 +133,11 @@ func ReadSession(r io.Reader) (s *Session, err os.Error) {
 }
 
 func (s *Session) Id() string { return s.id }
+
+func (s *Session) Get(k string) string { return s.props[k] }
+func (s *Session) Set(k, v string) (prev string) {
+        prev = s.props[k]
+        s.props[k] = v
+        return
+}
 
