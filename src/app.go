@@ -32,7 +32,7 @@ type AppModel interface {
         PathInfo() string
         QueryString() string
         ScriptName() string
-        Cookie() string
+        HttpCookie() string
         RequestReader() io.Reader // for reading data like POST messages
         ResponseWriter() io.Writer
 
@@ -77,17 +77,11 @@ func ParseCookies(s string) (cookies []*Cookie) {
                                 // TODO: version checking
                                 continue
                         case "$Domain":
-                                if c != nil {
-                                        c.Domain = kv[1]
-                                }
+                                if c != nil { c.Domain = kv[1] }
                         case "$Path":
-                                if c != nil {
-                                        c.Path = kv[1]
-                                }
+                                if c != nil { c.Path = kv[1] }
                         case "$Max-Age":
-                                if c != nil {
-                                        // TODO: Max-Age selection...
-                                }
+                                if c != nil { /* TODO: Max-Age selection... */ }
                         default:
                                 c = new(Cookie)
                                 c.Name = kv[0]
@@ -120,7 +114,7 @@ func NewApp(title string, m interface {}) (app *App) {
 
                 shouldMakeNewSession := true
 
-                app.cookies = ParseCookies(am.Cookie())
+                app.cookies = ParseCookies(am.HttpCookie())
                 if c := app.Cookie("session"); c != nil {
                         // TODO: check value of c.Name and c.Content
                         sec, err := LoadSession(c.Content)
@@ -156,7 +150,7 @@ func (app *App) Query(k string) []string { return app.query[k] }
 func (app *App) RequestReader() io.Reader { return app.model.RequestReader() }
 
 // Returns unparsed cookies.
-func (app *App) RawCookie() string { return app.model.Cookie() }
+func (app *App) RawCookie() string { return app.model.HttpCookie() }
 func (app *App) Cookie(k string) (rc *Cookie) {
         for _, c := range app.cookies {
                 if c.Name == k/* TODO: ignore cases? */ {

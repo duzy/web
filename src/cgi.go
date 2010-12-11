@@ -51,7 +51,7 @@ func (cgi *CGIModel) ScriptName() string {
         return cgi.Getenv("SCRIPT_NAME")
 }
 
-func (cgi *CGIModel) Cookie() string {
+func (cgi *CGIModel) HttpCookie() string {
         return cgi.Getenv("HTTP_COOKIE")
 }
 
