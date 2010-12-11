@@ -42,5 +42,7 @@ func (cp *cpanelPage) MakeFields(app *web.App) interface{} {
                 cp.content = "TODO: default content"
                 cp.rightside = "TODO: default commands"
         }
+        cp.rightside = "session: " + app.Cookie("session").Content + "<br/>"
+        cp.rightside += "raw-cookie: " + app.RawCookie()
         return cp
 }

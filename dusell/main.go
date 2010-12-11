@@ -8,10 +8,15 @@ import (
 )
 
 var flagPath = flag.String("path", "", "Set PATH_INFO for debug.")
+var flagSid = flag.String("session", "", "Set session id for debug.")
 
 func setupCGIModel(model web.AppModel) {
         if cgi, ok := model.(*web.CGIModel); ok {
                 if *flagPath != "" { cgi.Setenv("PATH_INFO", *flagPath) }
+                if *flagSid != "" {
+                        cookie := "session=" + *flagSid
+                        cgi.Setenv("HTTP_COOKIE", cookie)
+                }
                 if cgi.Getenv("SCRIPT_NAME") == "" {
                         cgi.Setenv("SCRIPT_NAME", os.Args[0])
                 }
@@ -25,6 +30,7 @@ func main() {
         cpanelView := web.NewView(dusell.GetCPanelPage())
 
         model := web.NewCGIModel()
+        defer model.HandleErrors()
 
         setupCGIModel(model)
 

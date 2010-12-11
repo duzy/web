@@ -32,18 +32,84 @@ type AppModel interface {
         PathInfo() string
         QueryString() string
         ScriptName() string
+        Cookie() string
         RequestReader() io.Reader // for reading data like POST messages
         ResponseWriter() io.Writer
+
+        HandleErrors() // TODO: think about the error handling
+}
+
+type Cookie struct {
+        //nv map[string]string
+        Name string
+        Content string // TODO: should be named as Value
+        Domain string
+        Path string
+        Expires string
+        Version string
+}
+
+func (c *Cookie) String() string {
+        s := ""
+        if c.Name    != "" { s += c.Name + "=" + c.Content }
+        if c.Expires != "" { s += "; expires=" + c.Expires }
+        if c.Domain  != "" { s += "; domain=" + c.Domain }
+        if c.Path    != "" { s += "; path=" + c.Path }
+        if c.Version != "" { s += "; version=" + c.Version }
+        // for n, v := range c.nv {
+        //         if s != "" { s += "; " }
+        //         s += n + "=" + v;
+        // }
+        return s
+}
+
+// See http://ftp.ics.uci.edu/pub/ietf/http/rfc2109.txt.
+func ParseCookies(s string) (cookies []*Cookie) {
+        cookies = make([]*Cookie, 0)
+        s = strings.TrimSpace(s) // FIXME: needed?
+        if ss := strings.Split(s, ";", -1); 0 < len(ss) {
+                var c *Cookie
+                for _, a := range ss {
+                        kv := strings.Split(strings.TrimSpace(a), "=", 2)
+                        if len(kv) != 2 { continue }
+                        switch kv[0] {
+                        case "$Version":
+                                // TODO: version checking
+                                continue
+                        case "$Domain":
+                                if c != nil {
+                                        c.Domain = kv[1]
+                                }
+                        case "$Path":
+                                if c != nil {
+                                        c.Path = kv[1]
+                                }
+                        case "$Max-Age":
+                                if c != nil {
+                                        // TODO: Max-Age selection...
+                                }
+                        default:
+                                c = new(Cookie)
+                                c.Name = kv[0]
+                                c.Content = kv[1]
+                                cookies = append(cookies, c)
+                                c = nil // reset
+                        }
+                }
+        }
+        return
 }
 
 // Indicate a CGI web session, also holds parameters of a request.
 type App struct {
         model AppModel
+        session *Session
         handlers map[string]Handler
         title string
         pathMatcher PathMatcher
         query map[string][]string
         header map[string]string
+        cookies []*Cookie
 }
 
 // Produce a new web.App to talk to a session.
@@ -51,6 +117,30 @@ func NewApp(title string, m interface {}) (app *App) {
         if am, ok := m.(AppModel); ok {
                 app = new(App)
                 app.model = am
+
+                shouldMakeNewSession := true
+
+                app.cookies = ParseCookies(am.Cookie())
+                if c := app.Cookie("session"); c != nil {
+                        // TODO: check value of c.Name and c.Content
+                        sec, err := LoadSession(c.Content)
+                        if err == nil {
+                                shouldMakeNewSession = false
+                                app.session = sec
+                        } else {
+                                // TODO: log errors
+                                //panic(err)
+                        }
+                }
+
+                if shouldMakeNewSession {
+                        app.session = NewSession()
+                        app.cookies = append(app.cookies, &Cookie{
+                        Name: "session",
+                        Content: app.session.Id(),
+                        })
+                }
+
                 app.title = title
                 app.handlers = make(map[string]Handler)
                 app.header = make(map[string]string)
@@ -64,6 +154,17 @@ func (app *App) Path() string { return app.model.PathInfo() }
 func (app *App) ScriptName() string { return app.model.ScriptName() }
 func (app *App) Query(k string) []string { return app.query[k] }
 func (app *App) RequestReader() io.Reader { return app.model.RequestReader() }
+
+// Returns unparsed cookies.
+func (app *App) RawCookie() string { return app.model.Cookie() }
+func (app *App) Cookie(k string) (rc *Cookie) {
+        for _, c := range app.cookies {
+                if c.Name == k/* TODO: ignore cases? */ {
+                        rc = c
+                }
+        }
+        return
+}
 
 func (app *App) Header(k string) string { return app.header[k] }
 func (app *App) SetHeader(k, v string) (prev string) {
@@ -87,11 +188,15 @@ func (app *App) HandleDefault(h Handler) (prev Handler) {
         return
 }
 
-func (app *App) ReturnError(w io.Writer, err os.Error) {
+func (app *App) ReturnError(w io.Writer, err interface{}) {
+        fmt.Fprintf(w, "Content-Type: text/plain\n\n")
         fmt.Fprintf(w, "error: %v", err)
 }
 
 func (app *App) writeHeader(w io.Writer) (err os.Error) {
+        for _, v := range app.cookies {
+                fmt.Fprintf(w, "Set-Cookie: %s\n", v.String())
+        }
         for k, v := range app.header {
                 fmt.Fprintf(w, "%s: %s\n", k, v)
         }
@@ -123,11 +228,20 @@ func (app *App) Exec() (err os.Error) {
                         if err != nil { /*TODO: error */ goto finish }
 
                         w := app.model.ResponseWriter()
+
+                        /*
+                        defer func() {
+                                if e := recover(); e != nil {
+                                        app.ReturnError(w, e)
+                                }
+                        }()
+                         */
+                        
                         w.Write(headerBuffer.Bytes())
                         w.Write(contentBuffer.Bytes())
-                        break
+                        break // just ignore any other handlers
                 }
-        }//for
+        }//for (app.handlers)
 
 finish:
         return

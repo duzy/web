@@ -6,7 +6,7 @@
   </head>
   <body>
     <div id="page">
-      <div id="header"><a href=".">Home</a>
+      <div id="header"><a href="{script}">Home</a>
         <h1>CPanel</h1>
       </div>
       <div id="content-left">

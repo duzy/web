@@ -41,6 +41,7 @@ func main() {
         check_error(err)
         defer w.Flush()
 
+        w.WriteString("Set-Cookie: foo=test-cookie\n")
         w.WriteString("Content-Type: text/html;\n\n")
 
         t, err := template.ParseFile("foo.tpl", nil)

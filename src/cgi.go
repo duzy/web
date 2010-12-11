@@ -3,6 +3,7 @@ package web
 import (
         "os"
         "io"
+        "fmt"
 )
 
 // Implements AppModel for CGI web.App.
@@ -50,6 +51,10 @@ func (cgi *CGIModel) ScriptName() string {
         return cgi.Getenv("SCRIPT_NAME")
 }
 
+func (cgi *CGIModel) Cookie() string {
+        return cgi.Getenv("HTTP_COOKIE")
+}
+
 func (cgi *CGIModel) ResponseWriter() (w io.Writer) {
         w = os.Stdout
         return
@@ -60,3 +65,9 @@ func (cgi *CGIModel) RequestReader() (r io.Reader) {
         return
 }
 
+func (cgi *CGIModel) HandleErrors() {
+        if err := recover(); err != nil {
+                fmt.Fprintf(os.Stdout, "Content-Type: text/plain\n\n")
+                fmt.Fprintf(os.Stdout, "error: %v", err)
+        }
+}
