@@ -91,6 +91,8 @@ func ParseCookies(s string) (cookies []*Cookie) {
         return
 }
 
+const cookieSessionId = "__web_cid" // use a special name for session id
+
 // Indicate a CGI web session, also holds parameters of a request.
 type App struct {
         model AppModel
@@ -108,14 +110,14 @@ func NewApp(title string, m interface {}) (app *App) {
         if am, ok := m.(AppModel); ok {
                 app = new(App)
                 app.model = am
+                app.cookies = make([]*Cookie, 0)
 
                 appScriptName := app.ScriptName()
 
-                app.cookies = make([]*Cookie, 0)
                 cookies := ParseCookies(am.HttpCookie())
                 for _, c := range cookies {
                         switch c.Name {
-                        case "session":
+                        case cookieSessionId:
                                 if c.Path == "" {
                                         c.Path = appScriptName
                                 }
@@ -128,7 +130,7 @@ func NewApp(title string, m interface {}) (app *App) {
 
                 shouldMakeNewSession := true
 
-                if c := app.Cookie("session"); c != nil {
+                if c := app.Cookie(cookieSessionId); c != nil {
                         // TODO: check value of c.Name and c.Content
                         sec, err := LoadSession(c.Content)
                         if err == nil {
@@ -146,11 +148,13 @@ func NewApp(title string, m interface {}) (app *App) {
                         //        returned by ParseCookies.
                         app.cookies = append(app.cookies, &Cookie{
                         changed: true,
-                        Name: "session",
+                        Name: cookieSessionId,
                         Content: app.session.Id(),
                         Path: app.ScriptName(),
                         })
                 }
+
+                if app.session == nil { panic("web: no session") }
 
                 // TODO: use hidden form for session state management
                 //       for the case that the client did not support
@@ -164,6 +168,7 @@ func NewApp(title string, m interface {}) (app *App) {
         return
 }
 
+func (app *App) Session() *Session { return app.session }
 func (app *App) Method() string { return app.model.RequestMethod() }
 func (app *App) Path() string { return app.model.PathInfo() }
 func (app *App) ScriptName() string { return app.model.ScriptName() }
@@ -227,6 +232,8 @@ func (app *App) writeHeader(w io.Writer) (err os.Error) {
 func (app *App) Exec() (err os.Error) {
         app.query, err = http.ParseQuery(app.model.QueryString())
         if err != nil { /* TODO: log error */ goto finish }
+
+        defer app.session.save()
 
         for k, h := range app.handlers {
                 if m, s := app.pathMatcher.PathMatched(k, app.Path()); m != PathMatchedNothing {

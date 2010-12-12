@@ -6,6 +6,7 @@ import (
         "time"
         "io"
         "os"
+        "strings"
 )
 
 // Persist the session between connections.
@@ -52,6 +53,7 @@ func (p *FSSessionPersister) Write(b []byte) (n int, err os.Error) {
 }
 
 type Session struct {
+        changed bool
         id string
         props map[string]string
 }
@@ -65,24 +67,12 @@ func genSid() (id string) {
 
 func NewSession() (s *Session) {
         s = &Session{
+        changed: true, // mark changed for saving
         id: genSid(),
         props: make(map[string]string),
         }
 
-        p, err := NewSessionPersister(s.id)
-        if err != nil {
-                fmt.Fprintf(os.Stderr, "error: %s\n", err)
-                goto finish
-        }
-        defer p.Close()
-
-        err = WriteSession(p, s)
-        if err != nil {
-                fmt.Fprintf(os.Stderr, "error: %s\n", err)
-                goto finish
-        }
-
-finish:
+        //s.save() // check result?
         return
 }
 
@@ -115,18 +105,27 @@ func WriteSession(w io.Writer, s *Session) (err os.Error) {
 
 func ReadSession(r io.Reader) (s *Session, err os.Error) {
         s = new(Session)
-        n, err := fmt.Fscanf(r, "id:%s\n", &s.id)
+        n, err := fmt.Fscanf(r, "id:%s", &s.id)
         if n == 1 && err == nil {
+                s.props = make(map[string]string)
                 for {
-                        var k, v string
-                        n, err = fmt.Fscanf(r, "%s:%s\n", &k, &v)
-                        if n != 2 || err != nil {
-                                if err.String() == "Scan: no data for string" {
+                        var ln, k, v string
+                        n, err = fmt.Fscanln(r, &ln)
+                        if n != 1 || err != nil {
+                                if err != nil && err.String() == "Scan: no data for string" {
                                         err = nil
                                 }
                                 break
                         }
-                        s.props[k] = v
+                        n = strings.Index(ln, ":")
+                        if 0 < n {
+                                k = ln[0:n]
+                                v = ln[n+1:len(ln)]
+                                s.props[k] = v
+                                s.changed = false
+                        } else {
+                                // FIXME: should break or just ignore?
+                        }
                 }
         }
         return
@@ -137,7 +136,33 @@ func (s *Session) Id() string { return s.id }
 func (s *Session) Get(k string) string { return s.props[k] }
 func (s *Session) Set(k, v string) (prev string) {
         prev = s.props[k]
-        s.props[k] = v
+        if prev != v {
+                s.props[k] = v
+                s.changed = true
+        }
         return
 }
 
+func (s *Session) save() (saved bool) {
+        saved = false
+        if s.changed {
+                p, err := NewSessionPersister(s.id)
+                if err != nil {
+                        fmt.Fprintf(os.Stderr, "error: %s\n", err)
+                        goto finish
+                }
+                defer p.Close()
+
+                err = WriteSession(p, s)
+                if err != nil {
+                        fmt.Fprintf(os.Stderr, "error: %s\n", err)
+                        goto finish
+                }
+                saved = true
+                s.changed = false
+                //fmt.Fprintf(os.Stdout, "session-saved: %s\n", s.id)
+        }
+
+finish:
+        return
+}

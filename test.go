@@ -15,6 +15,12 @@ func SayHello(w io.Writer, app *web.App) {
         counters["hello"] += 1
         app.SetHeader("Content-Type", "text/plain")
         fmt.Fprintf(w, "hello: %d\n", counters["hello"])
+
+        s := app.Session().Get("test")
+        fmt.Fprintf(w, "test: %s\n", s)
+
+        s = fmt.Sprintf("%s%d", s, counters["hello"])
+        app.Session().Set("test", s)
 }
 
 type SaveSomething struct {
@@ -48,6 +54,7 @@ where the PATH_INFO may be one of:
 
 func main() {
         path := flag.String("path", "", "specify a test PATH_INFO")
+        session := flag.String("session", "", "specify a test session id")
         help := flag.Bool("help", false, "show help message")
         flag.Parse()
 
@@ -58,6 +65,12 @@ func main() {
 
         if *path != "" && os.Getenv("PATH_INFO") == "" {
                 os.Setenv("PATH_INFO", *path)
+        }
+
+        if *session != "" {
+                //fmt.Fprintf(os.Stdout, "-session: %s\n", *session)
+                cookie := "__web_cid=" + *session
+                os.Setenv("HTTP_COOKIE", cookie)
         }
 
         hello := web.FuncHandler(SayHello)

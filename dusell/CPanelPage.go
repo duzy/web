@@ -49,5 +49,13 @@ func (cp *cpanelPage) MakeFields(app *web.App) interface{} {
         for _, c := range app.Cookies() {
                 cp.rightside += c.Name + "=" + c.Content + "<br/>"
         }
+
+        test := app.Session().Get("test")
+
+        cp.rightside += "<hr/>"
+        cp.rightside += "test: " + test
+
+        if len(test)%2 == 0 { test += "1" } else { test += "0" }
+        app.Session().Set("test", test)
         return cp
 }

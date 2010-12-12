@@ -14,7 +14,7 @@ func setupCGIModel(model web.AppModel) {
         if cgi, ok := model.(*web.CGIModel); ok {
                 if *flagPath != "" { cgi.Setenv("PATH_INFO", *flagPath) }
                 if *flagSid != "" {
-                        cookie := "session=" + *flagSid
+                        cookie := "__web_cid=" + *flagSid
                         cgi.Setenv("HTTP_COOKIE", cookie)
                 }
                 if cgi.Getenv("SCRIPT_NAME") == "" {
