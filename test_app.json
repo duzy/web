@@ -1,0 +1,33 @@
+{
+        "title": "test app via json",
+        "model": "CGI",
+
+        "persisters": {
+            "per_1": { "type": "FS", "location": "/tmp/web/sessions" },
+            "per_2": { "type": "DB",
+                "host": "localhost",
+                "user": "test",
+                "password": "abc",
+                "database": "dusell_2"
+            },
+            "per_3": { "type": "DB", "named":"dusell_2" }
+        },
+        "persister": "per_1",
+
+        "databases": {
+            "dusell": {
+                "host": "localhost",
+                "user": "test",
+                "password": "abc",
+                "database": "dusell"
+            },
+            "dusell_2": {
+                "host": "localhost",
+                "user": "test",
+                "password": "abc",
+                "database": "dusell_2"
+            }
+        },
+
+        "database": "dusell"
+}

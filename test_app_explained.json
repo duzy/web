@@ -1,0 +1,70 @@
+{
+        /**
+         * The title of the app.
+         */
+        "title": "test app via json",
+
+        /**
+         * The model of this app, maybe CGI, FCGI, etc. default to CGI.
+         * (OPTIONAL)
+         */
+        "model": "CGI",
+
+        /**
+         * The persister driver for session persistant.
+         * (OPTIONAL, Default to FS, maybe FS, DB, etc.)
+         */
+        /* "persister": { "type": "FS", "location": "/tmp/web/sessions" }, */
+        /* "persister": { "type": "DB", "named":"dusell_2" }, */
+        /*
+        "persister": { "type": "DB",
+            "host": "localhost",
+            "user": "test",
+            "password": "abc",
+            "database": "dusell_2"
+        },
+        */
+
+        /* Define named persisters */
+        "persisters": {
+            "per_1", { "type": "FS", "location": "/tmp/web/sessions" },
+            "per_2", { "type": "DB",
+                "host": "localhost",
+                "user": "test",
+                "password": "abc",
+                "database": "dusell_2"
+            },
+            "per_3" { "type": "DB", "named":"dusell_2" }
+        },
+        "persister": "per_1", /* select from named persister */
+
+        /* Define named databases */
+        "databases": {
+            "dusell": {
+                "host": "localhost",
+                "user": "test",
+                "password": "abc",
+                "database": "dusell"
+            },
+            "dusell_2": {
+                "host": "localhost",
+                "user": "test",
+                "password": "abc",
+                "database": "dusell_2"
+            }
+        },
+
+        /**
+         * Database parameters.
+         * (OPTIONAL, if not specified, no database will be opened)
+         */
+        /*
+        "database": {
+            "host": "localhost",
+            "user": "test",
+            "password": "abc",
+            "database": "dusell"
+        }
+        */
+        "database": "dusell"
+}
