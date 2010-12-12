@@ -96,9 +96,9 @@ finish:
 }
 
 func prop_escape(s string) string {
+        // TODO: avoid using two Replace
         s = strings.Replace(s, "\\", "\\\\", -1)
         s = strings.Replace(s, "\n", "\\n", -1)
-        //fmt.Fprintf(os.Stdout, "s: %s\n", s)
         return s
 }
 
