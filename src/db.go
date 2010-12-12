@@ -32,6 +32,7 @@ type QueryResult interface {
 
 type SQLStatement interface {
         Prepare(sql string) (err os.Error)
+        BindParams(params ...interface{}) (err os.Error)
         Execute() (res QueryResult, err os.Error)
         Reset() (err os.Error)
         Close() (err os.Error)

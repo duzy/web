@@ -95,15 +95,39 @@ func main() {
                 goto finish
         }
 
-        sql := `
-SELECT a, b, c FROM table_test LIMIT 10
-`
+        sql := `SELECT a, b, c FROM table_test LIMIT 10`
         res, err := db.Query(sql)
         if err != nil {
                 fmt.Printf("error: %s\n", err)
                 goto finish
         }
 
+        for {
+                row := res.FetchRow();
+                if row == nil { break }
+                for k, v := range row {
+                        fmt.Printf("%s:%v\n", res.GetFieldName(k), v)
+                }
+                fmt.Printf("\n")
+        }
+
+        stmt, _ := db.NewStatement()
+
+        sql = `SELECT a, b, c FROM table_test WHERE a<? LIMIT 10`
+        err = stmt.Prepare(sql)
+        if err != nil {
+                fmt.Printf("error: %s\n", err)
+                goto finish
+        }
+        stmt.BindParams(10)
+        res, err = stmt.Execute()
+        if err != nil {
+                fmt.Printf("error: %s\n", err)
+                goto finish
+        }
+        stmt.Close()
+
+        fmt.Printf("==================================\n")
         for {
                 row := res.FetchRow();
                 if row == nil { break }
