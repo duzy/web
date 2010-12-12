@@ -40,7 +40,7 @@ type AppModel interface {
 }
 
 type Cookie struct {
-        //nv map[string]string
+        changed bool // 'true' means the cookie must be sent via 'Set-Cookie'
         Name string
         Content string // TODO: should be named as Value
         Domain string
@@ -56,14 +56,11 @@ func (c *Cookie) String() string {
         if c.Domain  != "" { s += "; domain=" + c.Domain }
         if c.Path    != "" { s += "; path=" + c.Path }
         if c.Version != "" { s += "; version=" + c.Version }
-        // for n, v := range c.nv {
-        //         if s != "" { s += "; " }
-        //         s += n + "=" + v;
-        // }
         return s
 }
 
-// See http://ftp.ics.uci.edu/pub/ietf/http/rfc2109.txt.
+// Parse http cookies header.
+// See http://ftp.ics.uci.edu/pub/ietf/http/rfc2109.txt for full spec.
 func ParseCookies(s string) (cookies []*Cookie) {
         cookies = make([]*Cookie, 0)
         s = strings.TrimSpace(s) // FIXME: needed?
@@ -112,13 +109,24 @@ func NewApp(title string, m interface {}) (app *App) {
                 app = new(App)
                 app.model = am
 
-                shouldMakeNewSession := true
-
                 appScriptName := app.ScriptName()
-                app.cookies = ParseCookies(am.HttpCookie())
-                for _, c := range app.cookies {
-                        if c.Path == "" { c.Path = appScriptName }
+
+                app.cookies = make([]*Cookie, 0)
+                cookies := ParseCookies(am.HttpCookie())
+                for _, c := range cookies {
+                        switch c.Name {
+                        case "session":
+                                if c.Path == "" {
+                                        c.Path = appScriptName
+                                }
+
+                                // FIXME: UA may send more than one session
+                                //        cookie, should avoid duplication
+                                app.cookies = append(app.cookies, c)
+                        }
                 }
+
+                shouldMakeNewSession := true
 
                 if c := app.Cookie("session"); c != nil {
                         // TODO: check value of c.Name and c.Content
@@ -137,11 +145,16 @@ func NewApp(title string, m interface {}) (app *App) {
                         // FIXME: app.cookies may be not empty since it's
                         //        returned by ParseCookies.
                         app.cookies = append(app.cookies, &Cookie{
+                        changed: true,
                         Name: "session",
                         Content: app.session.Id(),
                         Path: app.ScriptName(),
                         })
                 }
+
+                // TODO: use hidden form for session state management
+                //       for the case that the client did not support
+                //       cookies. Also for security reason?
 
                 app.title = title
                 app.handlers = make(map[string]Handler)
@@ -159,6 +172,7 @@ func (app *App) RequestReader() io.Reader { return app.model.RequestReader() }
 
 // Returns unparsed cookies.
 func (app *App) RawCookie() string { return app.model.HttpCookie() }
+func (app *App) Cookies() []*Cookie { return app.cookies }
 func (app *App) Cookie(k string) (rc *Cookie) {
         for _, c := range app.cookies {
                 if c.Name == k/* TODO: ignore cases? */ {
@@ -197,7 +211,11 @@ func (app *App) ReturnError(w io.Writer, err interface{}) {
 
 func (app *App) writeHeader(w io.Writer) (err os.Error) {
         for _, v := range app.cookies {
-                fmt.Fprintf(w, "Set-Cookie: %s\n", v.String())
+                // TODO: only Set-Cookie for 'changed' cookies, avoid for
+                //       browser returned cookies eg the 'session' cookie.
+                if v.changed {
+                        fmt.Fprintf(w, "Set-Cookie: %s\n", v.String())
+                }
         }
         for k, v := range app.header {
                 fmt.Fprintf(w, "%s: %s\n", k, v)
