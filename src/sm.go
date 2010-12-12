@@ -95,10 +95,42 @@ finish:
         return
 }
 
+func prop_escape(s string) string {
+        s = strings.Replace(s, "\\", "\\\\", -1)
+        s = strings.Replace(s, "\n", "\\n", -1)
+        //fmt.Fprintf(os.Stdout, "s: %s\n", s)
+        return s
+}
+
+func prop_unescape(v string) string {
+        s := ""
+        for {
+                var i int
+                if i = strings.Index(v, "\\"); i == -1 {
+                        s += v[0:len(v)]
+                        break
+                }
+
+                s += v[0:i]
+                if len(v) == i+1 {
+                        // FIXME: should the last '\' be ignored?
+                        break;
+                }
+
+                // escape chars, TODO: support C escape chars?
+                switch v[i+1:i+2] {
+                case "\\": s += "\\"
+                case "n": s += "\n"
+                }
+                v = v[i+2:len(v)] // reset slice
+        }
+        return s
+}
+
 func WriteSession(w io.Writer, s *Session) (err os.Error) {
         fmt.Fprintf(w, "id:%s\n", s.id)
         for k, v := range s.props {
-                fmt.Fprintf(w, "%s:%s\n", k, v)
+                fmt.Fprintf(w, "%s:%s\n", k, prop_escape(v))
         }
         return
 }
@@ -109,6 +141,7 @@ func ReadSession(r io.Reader) (s *Session, err os.Error) {
         if n == 1 && err == nil {
                 s.props = make(map[string]string)
                 for {
+                        // FIXME: handle with multi-line property
                         var ln, k, v string
                         n, err = fmt.Fscanln(r, &ln)
                         if n != 1 || err != nil {
@@ -121,7 +154,7 @@ func ReadSession(r io.Reader) (s *Session, err os.Error) {
                         if 0 < n {
                                 k = ln[0:n]
                                 v = ln[n+1:len(ln)]
-                                s.props[k] = v
+                                s.props[k] = prop_unescape(v)
                                 s.changed = false
                         } else {
                                 // FIXME: should break or just ignore?
