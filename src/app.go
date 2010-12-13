@@ -96,6 +96,7 @@ const cookieSessionId = "__web_cid" // use a special name for session id
 // Indicate a CGI web session, also holds parameters of a request.
 type App struct {
         model AppModel
+        config *AppConfig
         session *Session
         handlers map[string]Handler
         title string
@@ -107,64 +108,122 @@ type App struct {
 
 // Produce a new web.App to talk to a session.
 func NewApp(title string, m interface {}) (app *App) {
+        if cfg, ok := m.(*AppConfig); ok {
+                app = new(App)
+                if !app.initFromConfig(cfg) { app = nil }
+        }
+
+
         if am, ok := m.(AppModel); ok {
                 app = new(App)
-                app.model = am
-                app.cookies = make([]*Cookie, 0)
-
-                appScriptName := app.ScriptName()
-
-                cookies := ParseCookies(am.HttpCookie())
-                for _, c := range cookies {
-                        switch c.Name {
-                        case cookieSessionId:
-                                if c.Path == "" {
-                                        c.Path = appScriptName
-                                }
-
-                                // FIXME: UA may send more than one session
-                                //        cookie, should avoid duplication
-                                app.cookies = append(app.cookies, c)
-                        }
-                }
-
-                shouldMakeNewSession := true
-
-                if c := app.Cookie(cookieSessionId); c != nil {
-                        // TODO: check value of c.Name and c.Content
-                        sec, err := LoadSession(c.Content)
-                        if err == nil {
-                                shouldMakeNewSession = false
-                                app.session = sec
-                        } else {
-                                // TODO: log errors
-                                //panic(err)
-                        }
-                }
-
-                if shouldMakeNewSession {
-                        app.session = NewSession()
-                        // FIXME: app.cookies may be not empty since it's
-                        //        returned by ParseCookies.
-                        app.cookies = append(app.cookies, &Cookie{
-                        changed: true,
-                        Name: cookieSessionId,
-                        Content: app.session.Id(),
-                        Path: app.ScriptName(),
-                        })
-                }
-
-                if app.session == nil { panic("web: no session") }
-
-                // TODO: use hidden form for session state management
-                //       for the case that the client did not support
-                //       cookies. Also for security reason?
-
-                app.title = title
-                app.handlers = make(map[string]Handler)
-                app.header = make(map[string]string)
-                app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
+                if !app.initFromModel(am) { app = nil }
         }
+
+finish:
+        return
+}
+
+func NewAppFromConfig(a interface {}) (app *App) {
+        var cfg *AppConfig
+        switch v := a.(type) {
+        case *AppConfig:
+                cfg = v
+        case string:
+                cfg, err := LoadAppConfig(v)
+                if err != nil {
+                        // TODO: error handling
+                        goto finish
+                }
+        }
+
+        if cfg == nil {
+                // TODO: error handling
+                goto finish
+        }
+
+        app = NewApp(cfg.Title, cfg)
+
+finish:
+        return
+}
+
+func (app *App) initFromConfig(cfg *AppConfig) (initOK bool) {
+        switch cfg.Model {
+        case "CGI":
+                app.model = new(CGIModel)
+        default:
+                // TODO: unknown app model
+                goto failed
+        }
+
+        if yes, p := cfg.Persister.IsFS(); yes {
+                // TODO: ...
+        } else if yes, p := cfg.Persister.IsDB(); yes {
+                // TODO: ...
+        }
+
+        // TODO: database init
+                   
+        return
+}
+
+func (app *App) initFromModel(am AppModel) (initOK bool) {
+        app.model = am
+        app.cookies = make([]*Cookie, 0)
+
+        appScriptName := app.ScriptName()
+
+        cookies := ParseCookies(app.model.HttpCookie())
+        for _, c := range cookies {
+                switch c.Name {
+                case cookieSessionId:
+                        if c.Path == "" {
+                                c.Path = appScriptName
+                        }
+
+                        // FIXME: UA may send more than one session
+                        //        cookie, should avoid duplication
+                        app.cookies = append(app.cookies, c)
+                }
+        }
+
+        shouldMakeNewSession := true
+
+        if c := app.Cookie(cookieSessionId); c != nil {
+                // TODO: check value of c.Name and c.Content
+                sec, err := LoadSession(c.Content)
+                if err == nil {
+                        shouldMakeNewSession = false
+                        app.session = sec
+                } else {
+                        // TODO: log errors
+                        //panic(err)
+                }
+        }
+
+        if shouldMakeNewSession {
+                app.session = NewSession()
+                // FIXME: app.cookies may be not empty since it's
+                //        returned by ParseCookies.
+                app.cookies = append(app.cookies, &Cookie{
+                changed: true,
+                Name: cookieSessionId,
+                Content: app.session.Id(),
+                Path: app.ScriptName(),
+                })
+        }
+
+        if app.session == nil { panic("web: no session") }
+
+        // TODO: use hidden form for session state management
+        //       for the case that the client did not support
+        //       cookies. Also for security reason?
+
+        app.title = title // TODO: get rid of 'title' from web.App
+        app.handlers = make(map[string]Handler)
+        app.header = make(map[string]string)
+        app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
+        initOK = true
         return
 }
 

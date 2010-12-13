@@ -74,5 +74,7 @@ func main() {
                 panic("not FS persister")
         }
 
+        fmt.Printf("app: %s\n", cfg.Title)
+
 finish:
 }

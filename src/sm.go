@@ -9,21 +9,36 @@ import (
         "strings"
 )
 
+type Session struct {
+        changed bool
+        id string
+        props map[string]string
+}
+
 // Persist the session between connections.
 type SessionPersister interface {
         io.ReadWriteCloser
 }
 
+type FSSessionPersister struct { file *os.File }
+type DBSessionPersister struct { db Database }
+
 // Make a new session Persister.
 // The session id (sid) must be more than 5 chars length.
 func NewSessionPersister(sid string) (p SessionPersister, err os.Error) {
+        p, err = newFSSessionPersister(sid)
+        return
+}
+
+func newFSSessionPersister(sid string) (p SessionPersister, err os.Error) {
         fs := &FSSessionPersister{}
 
-        if len(sid) < 5 { goto finish }
+        const dirLen = 5
+        if len(sid) < dirLen { goto finish }
 
         var n int
         d := "/tmp/web/sessions/" // make a configurable base path
-        for n=0; n < 5; n+=1 {
+        for n=0; n < dirLen; n+=1 {
                 d += sid[n:n+1] + "/"
         }
         err = os.MkdirAll(d, 0700)
@@ -41,7 +56,11 @@ finish:
         return
 }
 
-type FSSessionPersister struct { file *os.File }
+func newDBSessionPersister(sid string) (p SessionPersister, err os.Error) {
+        // TODO: ...
+        return
+}
+
 func (p *FSSessionPersister) Close() os.Error { return p.file.Close() }
 func (p *FSSessionPersister) Read(b []byte) (n int, err os.Error) {
         n, err = p.file.Read(b)
@@ -52,11 +71,16 @@ func (p *FSSessionPersister) Write(b []byte) (n int, err os.Error) {
         return
 }
 
-type Session struct {
-        changed bool
-        id string
-        props map[string]string
+func (p *DBSessionPersister) Close() os.Error { return p.db.Close() }
+func (p *DBSessionPersister) Read(b []byte) (n int, err os.Error) {
+        // TODO: ...
+        return
 }
+func (p *DBSessionPersister) Write(b []byte) (n int, err os.Error) {
+        // TODO: ...
+        return
+}
+
 
 func genSid() (id string) {
         c := md5.New()
