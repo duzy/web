@@ -7,6 +7,6 @@
     && 8l -o test _obj/test.8 \
     && 8l -o test_db _obj/test_db.8 \
     && 8l -o test_appcfg _obj/test_appcfg.8 \
-    && ./test_appcfg $@
+    && ./test $@
 
 #    && gopack grc _obj/web.a _obj/cgi.8 \

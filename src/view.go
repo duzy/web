@@ -114,7 +114,7 @@ type FieldsMaker interface { MakeFields(app *App) interface{} }
 type StandardFields map[string]interface{}
 func (sf *StandardFields) MakeFields(app *App) interface{} {
         (*sf)["SCRIPT"] = app.ScriptName()
-        (*sf)["title"] = app.title
+        (*sf)["title"] = "TODO: get title from app.model" //app.title
         return sf
 }
 

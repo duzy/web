@@ -99,7 +99,6 @@ type App struct {
         config *AppConfig
         session *Session
         handlers map[string]Handler
-        title string
         pathMatcher PathMatcher
         query map[string][]string
         header map[string]string
@@ -107,43 +106,23 @@ type App struct {
 }
 
 // Produce a new web.App to talk to a session.
-func NewApp(title string, m interface {}) (app *App) {
-        if cfg, ok := m.(*AppConfig); ok {
+func NewApp(m interface {}) (app *App) {
+        switch v := m.(type) {
+        case AppModel:
                 app = new(App)
-                if !app.initFromConfig(cfg) { app = nil }
-        }
-
-
-        if am, ok := m.(AppModel); ok {
-                app = new(App)
-                if !app.initFromModel(am) { app = nil }
-        }
-
-finish:
-        return
-}
-
-func NewAppFromConfig(a interface {}) (app *App) {
-        var cfg *AppConfig
-        switch v := a.(type) {
+                if !app.initFromModel(v) { app = nil }
         case *AppConfig:
-                cfg = v
-        case string:
+                app = new(App)
+                if !app.initFromConfig(v) { app = nil }
+        case string: // app config file
                 cfg, err := LoadAppConfig(v)
-                if err != nil {
+                if err == nil {
+                        app = new(App)
+                        if !app.initFromConfig(cfg) { app = nil }
+                } else {
                         // TODO: error handling
-                        goto finish
                 }
         }
-
-        if cfg == nil {
-                // TODO: error handling
-                goto finish
-        }
-
-        app = NewApp(cfg.Title, cfg)
-
-finish:
         return
 }
 
@@ -153,24 +132,44 @@ func (app *App) initFromConfig(cfg *AppConfig) (initOK bool) {
                 app.model = new(CGIModel)
         default:
                 // TODO: unknown app model
-                goto failed
+                goto finish
         }
 
-        if yes, p := cfg.Persister.IsFS(); yes {
-                // TODO: ...
-        } else if yes, p := cfg.Persister.IsDB(); yes {
-                // TODO: ...
-        }
+        app.cookies = make([]*Cookie, 0)
+        app.handlers = make(map[string]Handler)
+        app.header = make(map[string]string)
+        app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
 
-        // TODO: database init
-                   
+        initOK = app.initSession()
+
+        // TODO: init database
+finish:
+        return
+}
+
+func newAppConfigForAppModel(am AppModel) (config *AppConfig) {
+        config = new(AppConfig)
+        switch am.(type) {
+        case *CGIModel: config.Model = "CGI"
+        }
+        config.Persister = &AppConfig_Persister{
+                &AppConfig_PersisterFS{ Location: "/tmp/web/sessions", },
+        }
         return
 }
 
 func (app *App) initFromModel(am AppModel) (initOK bool) {
         app.model = am
         app.cookies = make([]*Cookie, 0)
+        app.handlers = make(map[string]Handler)
+        app.header = make(map[string]string)
+        app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
+        app.config = newAppConfigForAppModel(app.model)
+        initOK = app.initSession()
+        return
+}
 
+func (app *App) initSession() (initOK bool) {
         appScriptName := app.ScriptName()
 
         cookies := ParseCookies(app.model.HttpCookie())
@@ -191,7 +190,7 @@ func (app *App) initFromModel(am AppModel) (initOK bool) {
 
         if c := app.Cookie(cookieSessionId); c != nil {
                 // TODO: check value of c.Name and c.Content
-                sec, err := LoadSession(c.Content)
+                sec, err := LoadSession(c.Content, app.config.Persister)
                 if err == nil {
                         shouldMakeNewSession = false
                         app.session = sec
@@ -218,11 +217,6 @@ func (app *App) initFromModel(am AppModel) (initOK bool) {
         // TODO: use hidden form for session state management
         //       for the case that the client did not support
         //       cookies. Also for security reason?
-
-        app.title = title // TODO: get rid of 'title' from web.App
-        app.handlers = make(map[string]Handler)
-        app.header = make(map[string]string)
-        app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
         initOK = true
         return
 }
@@ -292,7 +286,7 @@ func (app *App) Exec() (err os.Error) {
         app.query, err = http.ParseQuery(app.model.QueryString())
         if err != nil { /* TODO: log error */ goto finish }
 
-        defer app.session.save()
+        defer app.session.save(app.config.Persister)
 
         for k, h := range app.handlers {
                 if m, s := app.pathMatcher.PathMatched(k, app.Path()); m != PathMatchedNothing {

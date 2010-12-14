@@ -74,7 +74,7 @@ func main() {
         }
 
         hello := web.FuncHandler(SayHello)
-        app := web.NewApp("test app", web.NewCGIModel())
+        app := web.NewApp(web.NewCGIModel())
         app.HandleDefault(hello) // app.Handle("", hello); app.Handle("/", hello)
         app.Handle("/hello", hello)
         app.Handle("/view", web.NewView("test.tpl"))

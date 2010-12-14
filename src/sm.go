@@ -18,6 +18,8 @@ type Session struct {
 // Persist the session between connections.
 type SessionPersister interface {
         io.ReadWriteCloser
+        // TODO: add LoadSession
+        // TODO: add SaveSession or saveSession?
 }
 
 type FSSessionPersister struct { file *os.File }
@@ -25,12 +27,16 @@ type DBSessionPersister struct { db Database }
 
 // Make a new session Persister.
 // The session id (sid) must be more than 5 chars length.
-func NewSessionPersister(sid string) (p SessionPersister, err os.Error) {
-        p, err = newFSSessionPersister(sid)
+func NewSessionPersister(sid string, cfg *AppConfig_Persister) (p SessionPersister, err os.Error) {
+        if yes, v := cfg.IsFS(); yes {
+                p, err = newFSSessionPersister(sid, v)
+        } else if yes, v := cfg.IsDB(); yes {
+                p, err = newDBSessionPersister(sid, v)
+        }
         return
 }
 
-func newFSSessionPersister(sid string) (p SessionPersister, err os.Error) {
+func newFSSessionPersister(sid string, cfg *AppConfig_PersisterFS) (p SessionPersister, err os.Error) {
         fs := &FSSessionPersister{}
 
         const dirLen = 5
@@ -56,7 +62,7 @@ finish:
         return
 }
 
-func newDBSessionPersister(sid string) (p SessionPersister, err os.Error) {
+func newDBSessionPersister(sid string, cfg *AppConfig_Database) (p SessionPersister, err os.Error) {
         // TODO: ...
         return
 }
@@ -81,7 +87,6 @@ func (p *DBSessionPersister) Write(b []byte) (n int, err os.Error) {
         return
 }
 
-
 func genSid() (id string) {
         c := md5.New()
         fmt.Fprintf(c, "%v", time.Nanoseconds())
@@ -95,13 +100,12 @@ func NewSession() (s *Session) {
         id: genSid(),
         props: make(map[string]string),
         }
-
-        //s.save() // check result?
         return
 }
 
-func LoadSession(id string) (s *Session, err os.Error) {
-        p, err := NewSessionPersister(id)
+// TODO: make method of SessionPersister, or avoid 'cfg' parameter
+func LoadSession(id string, cfg *AppConfig_Persister) (s *Session, err os.Error) {
+        p, err := NewSessionPersister(id, cfg)
         if err != nil {
                 fmt.Fprintf(os.Stderr, "error: %s\n", err)
                 goto finish
@@ -119,14 +123,14 @@ finish:
         return
 }
 
-func prop_escape(s string) string {
+func propEscape(s string) string {
         // TODO: avoid using two Replace
         s = strings.Replace(s, "\\", "\\\\", -1)
         s = strings.Replace(s, "\n", "\\n", -1)
         return s
 }
 
-func prop_unescape(v string) string {
+func propUnescape(v string) string {
         s := ""
         for {
                 var i int
@@ -154,7 +158,7 @@ func prop_unescape(v string) string {
 func WriteSession(w io.Writer, s *Session) (err os.Error) {
         fmt.Fprintf(w, "id:%s\n", s.id)
         for k, v := range s.props {
-                fmt.Fprintf(w, "%s:%s\n", k, prop_escape(v))
+                fmt.Fprintf(w, "%s:%s\n", k, propEscape(v))
         }
         return
 }
@@ -178,7 +182,7 @@ func ReadSession(r io.Reader) (s *Session, err os.Error) {
                         if 0 < n {
                                 k = ln[0:n]
                                 v = ln[n+1:len(ln)]
-                                s.props[k] = prop_unescape(v)
+                                s.props[k] = propUnescape(v)
                                 s.changed = false
                         } else {
                                 // FIXME: should break or just ignore?
@@ -200,10 +204,10 @@ func (s *Session) Set(k, v string) (prev string) {
         return
 }
 
-func (s *Session) save() (saved bool) {
+func (s *Session) save(cfg *AppConfig_Persister) (saved bool) {
         saved = false
         if s.changed {
-                p, err := NewSessionPersister(s.id)
+                p, err := NewSessionPersister(s.id, cfg)
                 if err != nil {
                         fmt.Fprintf(os.Stderr, "error: %s\n", err)
                         goto finish

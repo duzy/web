@@ -56,6 +56,11 @@ type AppConfig_PersisterFS struct {
         Location string
 }
 
+// TODO: using it...
+type AppConfig_PersisterDB struct {
+        AppConfig_Database
+}
+
 type AppConfig_Database struct {
         Host string
         User string
