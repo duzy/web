@@ -188,7 +188,7 @@ func loadAppConfigJSON(fn string) (cfg *AppConfig, err os.Error) {
                                 if s, ok := p.base.(string); ok {
                                         // TODO: check cfg.Databases != nil
                                         // convert named database persister
-                                        p.base = cfg.Databases[s]
+                                        p.base = &AppConfig_PersisterDB{ *cfg.Databases[s] }
                                 }
                                 cfg.Persisters[k] = p
                         }
@@ -213,7 +213,7 @@ func loadAppConfigJSON(fn string) (cfg *AppConfig, err os.Error) {
                 cfg.Persister = parseJSONDecodedPersister(v)
                 if s, ok := cfg.Persister.base.(string); ok {
                         // TODO: check cfg.Databases != nil
-                        cfg.Persister.base = cfg.Databases[s]
+                        cfg.Persister.base = &AppConfig_PersisterDB{ *cfg.Databases[s] }
                 }
         }
 
