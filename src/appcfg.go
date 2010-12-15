@@ -34,7 +34,7 @@ type AppConfig struct {
 
 type AppConfig_Persister struct {
         /**
-         *  *AppConfig_PersisterFS or *AppConfig_Database
+         *  *AppConfig_PersisterFS or *AppConfig_PersisterDB
          */
         base interface{}
 }
@@ -44,8 +44,8 @@ func (p *AppConfig_Persister) IsFS() (ok bool, v *AppConfig_PersisterFS) {
         return
 }
 
-func (p *AppConfig_Persister) IsDB() (ok bool, v *AppConfig_Database) {
-        v, ok = p.base.(*AppConfig_Database)
+func (p *AppConfig_Persister) IsDB() (ok bool, v *AppConfig_PersisterDB) {
+        v, ok = p.base.(*AppConfig_PersisterDB)
         return
 }
 
@@ -100,11 +100,12 @@ func parseJSONDecodedPersister(v interface{}) (p *AppConfig_Persister) {
                                 p = new(AppConfig_Persister)
                                 if m["named"] != nil {
                                         if s, ok := m["named"].(string); ok {
-                                                // a string value will be replaced by a '*AppConfig_Database'
+                                                // a string value will be replaced by a '*AppConfig_PersisterDB'
                                                 p.base = s
                                         }
                                 } else {
-                                        p.base = parseJSONDecodedDatabase(v)
+                                        db := parseJSONDecodedDatabase(v)
+                                        p.base = &AppConfig_PersisterDB{ *db }
                                         // TODO: check "p.base != nil" ?
                                 }
                         case "FS":

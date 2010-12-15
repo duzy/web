@@ -62,7 +62,7 @@ finish:
         return
 }
 
-func newDBSessionPersister(sid string, cfg *AppConfig_Database) (p SessionPersister, err os.Error) {
+func newDBSessionPersister(sid string, cfg *AppConfig_PersisterDB) (p SessionPersister, err os.Error) {
         // TODO: ...
         return
 }
