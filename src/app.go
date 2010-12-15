@@ -126,12 +126,28 @@ func NewApp(m interface {}) (app *App) {
         return
 }
 
-func (app *App) initFromConfig(cfg *AppConfig) (initOK bool) {
+func newAppModelFromAppConfig(cfg *AppConfig) (am AppModel) {
         switch cfg.Model {
-        case "CGI":
-                app.model = new(CGIModel)
-        default:
-                // TODO: unknown app model
+        case "CGI": am = new(CGIModel)
+        }
+        return
+}
+
+func newAppConfigForAppModel(am AppModel) (config *AppConfig) {
+        config = new(AppConfig)
+        switch am.(type) {
+        case *CGIModel: config.Model = "CGI"
+        }
+        config.Persister = &AppConfig_Persister{
+                &AppConfig_PersisterFS{ Location: "/tmp/web/sessions", },
+        }
+        return
+}
+
+func (app *App) initFromConfig(cfg *AppConfig) (initOK bool) {
+        app.model = newAppModelFromAppConfig(cfg)
+        if app.model == nil {
+                // TODO: ...
                 goto finish
         }
 
@@ -144,17 +160,6 @@ func (app *App) initFromConfig(cfg *AppConfig) (initOK bool) {
 
         // TODO: init database
 finish:
-        return
-}
-
-func newAppConfigForAppModel(am AppModel) (config *AppConfig) {
-        config = new(AppConfig)
-        switch am.(type) {
-        case *CGIModel: config.Model = "CGI"
-        }
-        config.Persister = &AppConfig_Persister{
-                &AppConfig_PersisterFS{ Location: "/tmp/web/sessions", },
-        }
         return
 }
 
