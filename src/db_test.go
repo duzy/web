@@ -1,28 +1,23 @@
-package main
+package web
 
 import (
-        //"os"
-        //"io"
-        "fmt"
-        //"flag"
-        //"bytes"
-        "./_obj/web"
+        "testing"
         "./_obj/mysql"
 )
 
-func test_mysql() {
+func Test_mysql(t *testing.T) {
         db := mysql.New()
         db.Logging = false
         db.Connect("localhost", "test", "abc", "dusell")
         if db.Errno != 0 {
-                fmt.Printf("Error #d %s\n", db.Errno, db.Error)
+                t.Error("Error #d %s\n", db.Errno, db.Error)
                 goto finish
         }
         defer db.Close()
 
         db.Query("SET NAMES utf8")
         if db.Errno != 0 {
-                fmt.Printf("Error #d %s\n", db.Errno, db.Error)
+                t.Error("Error #d %s\n", db.Errno, db.Error)
                 goto finish
         }
 
@@ -34,7 +29,7 @@ c TEXT
 )`
         db.Query(sql)
         if db.Errno != 0 {
-                fmt.Printf("Error #d %s\n", db.Errno, db.Error)
+                t.Error("Error #d %s\n", db.Errno, db.Error)
                 goto finish
         }
 
@@ -44,13 +39,13 @@ INSERT INTO table_test(b,c) VALUES(?,?)
         stmt, _ := db.InitStmt()
         stmt.Prepare(sql)
         if stmt.Errno != 0 {
-                fmt.Printf("Error #d %s\n", stmt.Errno, stmt.Error)
+                t.Error("Error #d %s\n", stmt.Errno, stmt.Error)
                 goto finish
         }
         stmt.BindParams("name", "long text should go here...")
         stmt.Execute()
         if stmt.Errno != 0 {
-                fmt.Printf("Error #d %s\n", stmt.Errno, stmt.Error)
+                t.Error("Error #d %s\n", stmt.Errno, stmt.Error)
                 goto finish
         }
         stmt.Close()
@@ -61,7 +56,7 @@ SELECT a, b, c FROM table_test LIMIT 10
 `
         res, _ := db.Query(sql)
         if db.Errno != 0 {
-                fmt.Printf("Error #d %s\n", db.Errno, db.Error)
+                t.Error("Error #d %s\n", db.Errno, db.Error)
                 goto finish
         }
 
@@ -72,69 +67,74 @@ SELECT a, b, c FROM table_test LIMIT 10
                         break
                 }
                 for k, v := range row {
-                        fmt.Printf("%s:%v\n", res.Fields[k].Name, v)
+                        switch res.Fields[k].Name {
+                        case "a":
+                        case "b":
+                                if v != "name" { t.Error(v) }
+                        case "c":
+                                if v != "long text should go here..." { t.Error(v) }
+                        default:
+                                t.Error("unknown field: ", res.Fields[k].Name, v)
+                        }
                 }
-                fmt.Printf("\n")
         }
 
 finish:
 }
 
-func main() {
-        test_mysql()
-
-        fmt.Printf("==================================\n")
-
-        db := web.NewDatabase()
+func TestDatabase(t *testing.T) {
+        db := NewDatabase()
         db.Connect("localhost", "test", "abc", "dusell")
         defer db.Close()
 
         err := db.Ping()
-        if err != nil {
-                fmt.Printf("ping-error: %s\n", err)
-                goto finish
-        }
+        if err != nil { t.Error(err) }
 
         sql := `SELECT a, b, c FROM table_test LIMIT 10`
         res, err := db.Query(sql)
-        if err != nil {
-                fmt.Printf("error: %s\n", err)
-                goto finish
-        }
+        if err != nil { t.Error(err) }
 
         for {
                 row := res.FetchRow();
                 if row == nil { break }
                 for k, v := range row {
-                        fmt.Printf("%s:%v\n", res.GetFieldName(k), v)
+                        switch res.GetFieldName(k) {
+                        case "a":
+                        case "b":
+                                if v != "name" { t.Error(v) }
+                        case "c":
+                                if v != "long text should go here..." { t.Error(v) }
+                        default:
+                                t.Error("unknown field: ", res.GetFieldName(k), v)
+                        }
                 }
-                fmt.Printf("\n")
         }
 
         stmt, _ := db.NewStatement()
 
         sql = `SELECT a, b, c FROM table_test WHERE a<? LIMIT 10`
         err = stmt.Prepare(sql)
-        if err != nil {
-                fmt.Printf("error: %s\n", err)
-                goto finish
-        }
+        if err != nil { t.Error(err) }
+
         stmt.BindParams(10)
         res, err = stmt.Execute()
-        if err != nil {
-                fmt.Printf("error: %s\n", err)
-                goto finish
-        }
+        if err != nil { t.Error(err) }
+
         stmt.Close()
 
-        fmt.Printf("==================================\n")
         for {
                 row := res.FetchRow();
                 if row == nil { break }
                 for k, v := range row {
-                        fmt.Printf("%s:%v\n", res.GetFieldName(k), v)
+                        switch res.GetFieldName(k) {
+                        case "a":
+                        case "b":
+                                if v != "name" { t.Error(v) }
+                        case "c":
+                                if v != "long text should go here..." { t.Error(v) }
+                        default:
+                                t.Error("unknown field: ", res.GetFieldName(k), v)
+                        }
                 }
-                fmt.Printf("\n")
         }
-finish:
 }

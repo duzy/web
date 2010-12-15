@@ -27,6 +27,25 @@ nmgrep() {
 	done
 }
 
+go_files="
+  src/app.go
+  src/view.go
+  src/cgi.go
+  src/sm.go
+  src/db.go
+  src/db_mysql.go
+  src/appcfg.go
+"
+go_tests="
+`ls src/*_test.go`
+"
+
+(prepare _obj && prepare _test)\
+    && 8g -o _obj/web.8 $go_files \
+    && 8g -o _test/web.8 $go_files $go_tests \
+    && gopack grc _obj/web.a _obj/web.8 \
+    && gopack grc _test/web.a _test/web.8 \
+
 testmain=_testmain.go
 importpath=web
 {
@@ -86,23 +105,6 @@ importpath=web
 	echo '}'
 }>$testmain
 
-go_files="
-  src/app.go
-  src/view.go
-  src/cgi.go
-  src/sm.go
-  src/db.go
-  src/db_mysql.go
-  src/appcfg.go
-"
-go_tests="
-`ls src/*_test.go`
-"
-
-(prepare _obj && prepare _test)\
-    && 8g -o _obj/web.8 $go_files \
-    && 8g -o _test/web.8 $go_files $go_tests \
-    && gopack grc _obj/web.a _obj/web.8 \
-    && gopack grc _test/web.a _test/web.8 \
+(prepare _test)\
     && 8g -I_test -o _test/main.8 $testmain \
     && 8l -L_test -o testmain _test/main.8 \
