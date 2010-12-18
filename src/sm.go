@@ -188,10 +188,21 @@ finish:
         return
 }
 
-func propEscape(s string) string {
-        // TODO: avoid using two Replace
-        s = strings.Replace(s, "\\", "\\\\", -1)
-        s = strings.Replace(s, "\n", "\\n", -1)
+func propEscape(v string) string {
+        s := ""
+        for {
+                var i int
+                if i = strings.Index(v, "\\"); i != -1 {
+                        s += v[0:i] + "\\\\"
+                        v = v[i+1:len(v)] // slicing
+                } else if i = strings.Index(v, "\n"); i != -1 {
+                        s += v[0:i] + "\\n"
+                        v = v[i+1:len(v)] // slicing
+                } else {
+                        s += v
+                        break
+                }
+        }
         return s
 }
 

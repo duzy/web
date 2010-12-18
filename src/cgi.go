@@ -67,7 +67,7 @@ func (cgi *CGIModel) RequestReader() (r io.Reader) {
 
 func (cgi *CGIModel) HandleErrors() {
         if err := recover(); err != nil {
-                fmt.Fprintf(os.Stdout, "Content-Type: text/plain\n\n")
-                fmt.Fprintf(os.Stdout, "error: %v", err)
+                fmt.Fprintf(os.Stdout, "Content-Type: text/html\n\n")
+                fmt.Fprintf(os.Stdout, "<b>error</b>: %v", err)
         }
 }
