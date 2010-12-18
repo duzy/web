@@ -17,22 +17,32 @@ var configDB = &AppConfig_PersisterDB{
         },
 }
 
-func TestSessionSave(t *testing.T) {
-        cfg := &AppConfig_Persister{ configFS }
+func testSaveLoadSession(t *testing.T, cfg *AppConfig_Persister) {
         sid := ""
         {
                 s := NewSession()
                 sid = s.Id()
                 if sid == "" { t.Error("Failed NewSession()") }
-                s.Set("test", "test-value")
-                s.save(cfg)
+                v := s.Set("test", "test-value")
+                if v != "" { t.Error("Previous test value is not empty") }
+                v = s.Get("test")
+                if v != "test-value" { t.Error("Set property failed") }
+                if !s.save(cfg) { t.Error("Failed session save") }
         }
         {
                 s, err := LoadSession(sid, cfg)
                 if err != nil { t.Error(err) }
-                if s.Id() == "" { t.Error("Failed NewSession()") }
+                if s.Id() == "" { t.Error("Failed LoadSession()") }
                 if s.Get("test") != "test-value" {
                         t.Error("Session props persist error")
                 }
         }
+}
+
+func TestSessionPersistFS(t *testing.T) {
+        testSaveLoadSession(t, &AppConfig_Persister{ configFS })
+}
+
+func TestSessionPersistDB(t *testing.T) {
+        testSaveLoadSession(t, &AppConfig_Persister{ configDB })
 }

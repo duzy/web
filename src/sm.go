@@ -7,6 +7,23 @@ import (
         "io"
         "os"
         "strings"
+        "bytes"
+)
+
+const (
+        SQL_CREATE_SESSION_TABLE = `
+CREATE TABLE IF NOT EXISTS table_web_sessions(
+  sid CHAR(64) PRIMARY KEY,
+  props TEXT
+)
+`
+        SQL_INSERT_SESSION_ROW = `
+INSERT INTO table_web_sessions(sid,props) VALUES(?,?)
+  ON DUPLICATE KEY UPDATE props=VALUES(props)
+`
+        SQL_SELECT_SESSION_ROW = `
+SELECT props FROM table_web_sessions WHERE sid=? LIMIT 1
+`
 )
 
 type Session struct {
@@ -23,7 +40,11 @@ type SessionPersister interface {
 }
 
 type FSSessionPersister struct { file *os.File }
-type DBSessionPersister struct { db Database }
+type DBSessionPersister struct {
+        sid string
+        db Database
+        buf *bytes.Buffer
+}
 
 // Make a new session Persister.
 // The session id (sid) must be more than 5 chars length.
@@ -63,7 +84,37 @@ finish:
 }
 
 func newDBSessionPersister(sid string, cfg *AppConfig_PersisterDB) (p SessionPersister, err os.Error) {
-        // TODO: ...
+        db := NewDatabase()
+        err = db.Connect(cfg.Host, cfg.User, cfg.Password, cfg.Database)
+        if err != nil { /* TODO: error */ goto finish }
+
+        sql := SQL_CREATE_SESSION_TABLE
+        _, err = db.Query(sql)
+        if err != nil { /* TODO: error */ goto finish }
+
+        stmt, err := db.NewStatement()
+        if err != nil { /* TODO: error */ goto finish }
+
+        err = stmt.Prepare(SQL_SELECT_SESSION_ROW)
+        if err != nil { /* TODO: error */ goto finish }
+
+        stmt.BindParams(sid)
+        res, err := stmt.Execute()
+        if err != nil { /* TODO: error */ goto finish }
+
+        stmt.Close()
+
+        props := ""
+        row := res.FetchRow()
+        if row != nil {
+                props = fmt.Sprintf("%s", row[0])
+        } else { /* TODO: error */ }
+
+        //fmt.Printf("sid=%s\nprops:\n%s", sid, props)
+        
+        p = &DBSessionPersister{ sid, db, bytes.NewBufferString(props) }
+
+finish:
         return
 }
 
@@ -77,13 +128,27 @@ func (p *FSSessionPersister) Write(b []byte) (n int, err os.Error) {
         return
 }
 
-func (p *DBSessionPersister) Close() os.Error { return p.db.Close() }
 func (p *DBSessionPersister) Read(b []byte) (n int, err os.Error) {
-        // TODO: ...
+        n, err = p.buf.Read(b)
         return
 }
 func (p *DBSessionPersister) Write(b []byte) (n int, err os.Error) {
-        // TODO: ...
+        n, err = p.buf.Write(b)
+        return
+}
+func (p *DBSessionPersister) Close() (err os.Error) {
+        stmt, err := p.db.NewStatement()
+        if err == nil {
+                sql := SQL_INSERT_SESSION_ROW
+                err = stmt.Prepare(sql)
+                if err != nil { /* TODO: error */ goto finish }
+                stmt.BindParams(p.sid, p.buf.String())
+                _, err := stmt.Execute()
+                if err != nil { /* TODO: error */ goto finish }
+                stmt.Close()
+        }
+finish:
+        err = p.db.Close()
         return
 }
 
@@ -165,9 +230,9 @@ func WriteSession(w io.Writer, s *Session) (err os.Error) {
 
 func ReadSession(r io.Reader) (s *Session, err os.Error) {
         s = new(Session)
+        s.props = make(map[string]string)
         n, err := fmt.Fscanf(r, "id:%s", &s.id)
         if n == 1 && err == nil {
-                s.props = make(map[string]string)
                 for {
                         // FIXME: handle with multi-line property
                         var ln, k, v string
@@ -212,6 +277,10 @@ func (s *Session) save(cfg *AppConfig_Persister) (saved bool) {
                         fmt.Fprintf(os.Stderr, "error: %s\n", err)
                         goto finish
                 }
+                if p == nil {
+                        fmt.Fprintf(os.Stderr, "error: can't new a session\n")
+                        goto finish
+                }
                 defer p.Close()
 
                 err = WriteSession(p, s)
@@ -221,7 +290,6 @@ func (s *Session) save(cfg *AppConfig_Persister) (saved bool) {
                 }
                 saved = true
                 s.changed = false
-                //fmt.Fprintf(os.Stdout, "session-saved: %s\n", s.id)
         }
 
 finish:

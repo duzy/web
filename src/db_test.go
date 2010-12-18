@@ -84,10 +84,11 @@ finish:
 
 func TestDatabase(t *testing.T) {
         db := NewDatabase()
-        db.Connect("localhost", "test", "abc", "dusell")
+        err := db.Connect("localhost", "test", "abc", "dusell")
+        if err != nil { t.Error(err) }
         defer db.Close()
 
-        err := db.Ping()
+        err = db.Ping()
         if err != nil { t.Error(err) }
 
         sql := `SELECT a, b, c FROM table_test LIMIT 10`
