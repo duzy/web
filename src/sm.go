@@ -84,8 +84,8 @@ finish:
 }
 
 func newDBSessionPersister(sid string, cfg *AppConfig_PersisterDB) (p SessionPersister, err os.Error) {
-        db := NewDatabase()
-        err = db.Connect(cfg.Host, cfg.User, cfg.Password, cfg.Database)
+        dbm := GetDBManager()
+        db, err := dbm.GetDatabase(&(cfg.AppConfig_Database))
         if err != nil { /* TODO: error */ goto finish }
 
         sql := SQL_CREATE_SESSION_TABLE
@@ -96,11 +96,11 @@ func newDBSessionPersister(sid string, cfg *AppConfig_PersisterDB) (p SessionPer
         if err != nil { /* TODO: error */ goto finish }
 
         err = stmt.Prepare(SQL_SELECT_SESSION_ROW)
-        if err != nil { /* TODO: error */ goto finish }
+        if err != nil { /* TODO: error */ stmt.Close(); goto finish }
 
         stmt.BindParams(sid)
         res, err := stmt.Execute()
-        if err != nil { /* TODO: error */ goto finish }
+        if err != nil { /* TODO: error */ stmt.Close(); goto finish }
 
         stmt.Close()
 

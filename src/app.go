@@ -291,7 +291,12 @@ func (app *App) Exec() (err os.Error) {
         app.query, err = http.ParseQuery(app.model.QueryString())
         if err != nil { /* TODO: log error */ goto finish }
 
-        defer app.session.save(app.config.Persister)
+        defer func() {
+                app.session.save(app.config.Persister)
+
+                dbm := GetDBManager()
+                dbm.CloseAll() // close all databases
+        }()
 
         for k, h := range app.handlers {
                 if m, s := app.pathMatcher.PathMatched(k, app.Path()); m != PathMatchedNothing {

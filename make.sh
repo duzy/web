@@ -32,6 +32,7 @@ go_files="
   src/view.go
   src/cgi.go
   src/sm.go
+  src/dbmgr.go
   src/db.go
   src/db_mysql.go
   src/appcfg.go
