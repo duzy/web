@@ -4,6 +4,7 @@ import (
         "../_obj/web"
         "./_obj/dusell"
         "flag"
+        "fmt"
         "os"
 )
 
@@ -29,12 +30,13 @@ func main() {
         homeView := web.NewView(dusell.GetHomePage())
         cpanelView := web.NewView(dusell.GetCPanelPage())
 
-        model := web.NewCGIModel()
-        defer model.HandleErrors()
+        defer web.CGIHandleErrors()
 
-        setupCGIModel(model)
+        app, err := web.NewApp("config.json") //(web.NewCGIModel())
+        if err != nil { panic(fmt.Sprintf("NewApp: %v", err)) }
+        if app == nil { panic("NewApp: failed") }
+        setupCGIModel(app.GetModel())
 
-        app := web.NewApp("Dusell - find what you want", model)
         app.HandleDefault(homeView)
         app.Handle("/cp", cpanelView)
         //app.Handle("/order", OrderHandler)

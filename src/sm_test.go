@@ -2,10 +2,11 @@ package web
 
 import (
         "testing"
+        "os"
 )
 
 var configFS = &AppConfig_PersisterFS{
-Location: "/tmp/web/test/PersisterFS",
+Location: "/tmp/web-test/PersisterFS",
 }
 
 var configDB = &AppConfig_PersisterDB{
@@ -17,8 +18,7 @@ var configDB = &AppConfig_PersisterDB{
         },
 }
 
-func testSaveLoadSession(t *testing.T, cfg *AppConfig_Persister) {
-        sid := ""
+func testSaveLoadSession(t *testing.T, cfg AppConfig_Persister) (sid string) {
         {
                 s := NewSession()
                 sid = s.Id()
@@ -31,7 +31,7 @@ func testSaveLoadSession(t *testing.T, cfg *AppConfig_Persister) {
                 if v != "" { t.Error("Previous 'multiline' value is not empty") }
                 v = s.Get("multiline")
                 if v != "line1\nline2\nline3\nline4" { t.Error("Set property failed") }
-                if !s.save(cfg) { t.Error("Failed session save") }
+                if err := s.save(cfg); err != nil { t.Error("Failed session save:", err) }
         }
         {
                 s, err := LoadSession(sid, cfg)
@@ -44,12 +44,23 @@ func testSaveLoadSession(t *testing.T, cfg *AppConfig_Persister) {
                         t.Error("Session props persist error")
                 }
         }
+        return
 }
 
 func TestSessionPersistFS(t *testing.T) {
-        testSaveLoadSession(t, &AppConfig_Persister{ configFS })
+        sid := testSaveLoadSession(t, configFS)
+        d := configFS.Location
+        d += "/" + sid[0:1]
+        d += "/" + sid[1:2]
+        d += "/" + sid[2:3]
+        d += "/" + sid[3:4]
+        d += "/" + sid[4:5]
+        d += "/" + sid[5:len(sid)]
+        if _, err := os.Stat(d); err != nil {
+                t.Error(err)
+        }
 }
 
 func TestSessionPersistDB(t *testing.T) {
-        testSaveLoadSession(t, &AppConfig_Persister{ configDB })
+        testSaveLoadSession(t, configDB)
 }

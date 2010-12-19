@@ -27,4 +27,10 @@ func TestDBManager(t *testing.T) {
         if err != nil { t.Error(err) }
 
         if db != db2 { t.Error("returned two db with one cfg") }
+
+        if rec, ok := db.(*dbrecord); ok {
+                if rec.useCount < 2 { t.Error("wrong dbrecord.useCount") }
+        } else {
+                t.Error("not a dbrecord returned")
+        }
 }

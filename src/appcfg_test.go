@@ -1,9 +1,9 @@
 package web
 
 import (
-        "./_obj/web"
         "testing"
         "reflect"
+        "fmt"
 )
 
 func check(t *testing.T, a, b interface{}) {
@@ -13,7 +13,7 @@ func check(t *testing.T, a, b interface{}) {
 }
 
 func TestLoadAppConfig(t *testing.T) {
-        cfg, err := web.LoadAppConfig("test_app.json")
+        cfg, err := LoadAppConfig("test_app.json")
         if err != nil { t.Error(err) }
 
         check(t, cfg.Title, "test app via json")
@@ -35,38 +35,48 @@ func TestLoadAppConfig(t *testing.T) {
         check(t, d.Password, "abc")
         check(t, d.Database, "dusell_2")
 
-        p := cfg.Persisters["per_1"]
-        if p == nil { t.Error("no persister 'per_1'") }
-        if ok, v := p.IsFS(); ok {
+        var per interface{}
+        per = cfg.Persisters["per_1"]
+        if per == nil { t.Error("no persister 'per_1'") }
+        if fmt.Sprintf("%v",per) != "&{/tmp/web/sessions}" {
+                t.Error("per_1 is unexpected:", per)
+        }
+        if v, ok := per.(*AppConfig_PersisterFS); ok {
                 check(t, v.Location, "/tmp/web/sessions")
-        } else { t.Error("per_1 is not FS persister") }
+        } else { t.Error("per_1 is not FS persister:", per) }
 
-        p = cfg.Persisters["per_2"]
-        if p == nil { t.Error("no persister 'per_2'") }
-        if ok, v := p.IsDB(); ok {
+        per = cfg.Persisters["per_2"]
+        if per == nil { t.Error("no persister 'per_2'") }
+        if fmt.Sprintf("%v",per) != "&{{localhost test abc dusell_2}}" {
+                t.Error("per_2 is unexpected:", per)
+        }
+        if v, ok := per.(*AppConfig_PersisterDB); ok {
                 check(t, v.Host, "localhost")
                 check(t, v.User, "test")
                 check(t, v.Password, "abc")
                 check(t, v.Database, "dusell_2")
-        } else { t.Error("per_2 is not DB persister") }
+        } else { t.Error("per_2 is not DB persister:", per) }
 
-        p = cfg.Persisters["per_3"]
-        if p == nil { t.Error("no persister 'per_3'") }
-        if ok, v := p.IsDB(); ok {
+        per = cfg.Persisters["per_3"]
+        if per == nil { t.Error("no persister 'per_3'") }
+        if fmt.Sprintf("%v",per) != "&{{localhost test abc dusell_2}}" {
+                t.Error("per_3 is unexpected:", per)
+        }
+        if v, ok := per.(*AppConfig_PersisterDB); ok {
                 check(t, v.Host, "localhost")
                 check(t, v.User, "test")
                 check(t, v.Password, "abc")
                 check(t, v.Database, "dusell_2")
-        } else { t.Error("per_3 is not DB persister") }
+        } else { t.Error("per_3 is not DB persister:", per) }
 
         if cfg.Database == nil { t.Error("database is nil") }
         if cfg.Persister == nil { t.Error("persister is nil") }
 
         check(t, cfg.Database.Database, "dusell")
 
-        if ok, v := cfg.Persister.IsFS(); ok {
+        if v, ok := cfg.Persister.(*AppConfig_PersisterFS); ok {
                 check(t, v.Location, "/tmp/web/sessions")
         } else {
-                t.Error("not FS persister")
+                t.Error("not FS persister:", cfg.Persister)
         }
 }

@@ -46,12 +46,16 @@ type DBSessionPersister struct {
         buf *bytes.Buffer
 }
 
+var defaultPersisterConfigFS = &AppConfig_PersisterFS{
+        "/tmp/web/sessions/",
+}
+
 // Make a new session Persister.
 // The session id (sid) must be more than 5 chars length.
-func NewSessionPersister(sid string, cfg *AppConfig_Persister) (p SessionPersister, err os.Error) {
-        if yes, v := cfg.IsFS(); yes {
+func NewSessionPersister(sid string, cfg AppConfig_Persister) (p SessionPersister, err os.Error) {
+        if v, ok := cfg.(*AppConfig_PersisterFS); ok {
                 p, err = newFSSessionPersister(sid, v)
-        } else if yes, v := cfg.IsDB(); yes {
+        } else if v, ok := cfg.(*AppConfig_PersisterDB); ok {
                 p, err = newDBSessionPersister(sid, v)
         }
         return
@@ -64,7 +68,14 @@ func newFSSessionPersister(sid string, cfg *AppConfig_PersisterFS) (p SessionPer
         if len(sid) < dirLen { goto finish }
 
         var n int
-        d := "/tmp/web/sessions/" // make a configurable base path
+        d := cfg.Location
+
+        if d=="" {
+                d = defaultPersisterConfigFS.Location
+        }
+
+        if d[len(d)-1] != '/' { d += "/" }
+
         for n=0; n < dirLen; n+=1 {
                 d += sid[n:n+1] + "/"
         }
@@ -169,7 +180,7 @@ func NewSession() (s *Session) {
 }
 
 // TODO: make method of SessionPersister, or avoid 'cfg' parameter
-func LoadSession(id string, cfg *AppConfig_Persister) (s *Session, err os.Error) {
+func LoadSession(id string, cfg AppConfig_Persister) (s *Session, err os.Error) {
         p, err := NewSessionPersister(id, cfg)
         if err != nil {
                 fmt.Fprintf(os.Stderr, "error: %s\n", err)
@@ -280,10 +291,10 @@ func (s *Session) Set(k, v string) (prev string) {
         return
 }
 
-func (s *Session) save(cfg *AppConfig_Persister) (saved bool) {
-        saved = false
+func (s *Session) save(cfg AppConfig_Persister) (err os.Error) {
         if s.changed {
-                p, err := NewSessionPersister(s.id, cfg)
+                var p SessionPersister
+                p, err = NewSessionPersister(s.id, cfg)
                 if err != nil {
                         fmt.Fprintf(os.Stderr, "error: %s\n", err)
                         goto finish
@@ -299,7 +310,6 @@ func (s *Session) save(cfg *AppConfig_Persister) (saved bool) {
                         fmt.Fprintf(os.Stderr, "error: %s\n", err)
                         goto finish
                 }
-                saved = true
                 s.changed = false
         }
 

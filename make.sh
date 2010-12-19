@@ -36,6 +36,7 @@ go_files="
   src/db.go
   src/db_mysql.go
   src/appcfg.go
+  src/err.go
 "
 go_tests="
 `ls src/*_test.go`

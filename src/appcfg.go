@@ -3,6 +3,7 @@ package web
 import (
         "os"
         //"xml"
+        //"fmt"
         "json"
         "strings"
 )
@@ -14,7 +15,7 @@ type AppConfig struct {
         /**
          * Session persister driver.
          */
-        Persister *AppConfig_Persister
+        Persister AppConfig_Persister
 
         /**
          * Default database config.
@@ -24,7 +25,7 @@ type AppConfig struct {
         /**
          * Named persisters.
          */
-        Persisters map[string]*AppConfig_Persister
+        Persisters map[string]AppConfig_Persister
 
         /**
          * Named databases.
@@ -32,22 +33,10 @@ type AppConfig struct {
         Databases map[string]*AppConfig_Database
 }
 
-type AppConfig_Persister struct {
-        /**
-         *  *AppConfig_PersisterFS or *AppConfig_PersisterDB
-         */
-        base interface{}
-}
-
-func (p *AppConfig_Persister) IsFS() (ok bool, v *AppConfig_PersisterFS) {
-        v, ok = p.base.(*AppConfig_PersisterFS)
-        return
-}
-
-func (p *AppConfig_Persister) IsDB() (ok bool, v *AppConfig_PersisterDB) {
-        v, ok = p.base.(*AppConfig_PersisterDB)
-        return
-}
+/**
+ *  *AppConfig_PersisterFS or *AppConfig_PersisterDB
+ */
+type AppConfig_Persister interface{}
 
 type AppConfig_PersisterFS struct {
         /**
@@ -91,22 +80,20 @@ func LoadAppConfig(fn string) (cfg *AppConfig, err os.Error) {
         "database": "dusell_2"
       }
  */
-func parseJSONDecodedPersister(v interface{}) (p *AppConfig_Persister) {
+func parseJSONDecodedPersister(v interface{}) (p AppConfig_Persister) {
         if m, ok := v.(map[string]interface{}); ok {
                 if m["type"] == nil { goto finish }
                 if typ, ok := m["type"].(string); ok {
                         switch typ {
                         case "DB":
-                                p = new(AppConfig_Persister)
                                 if m["named"] != nil {
                                         if s, ok := m["named"].(string); ok {
                                                 // a string value will be replaced by a '*AppConfig_PersisterDB'
-                                                p.base = s
+                                                p = s
                                         }
                                 } else {
                                         db := parseJSONDecodedDatabase(v)
-                                        p.base = &AppConfig_PersisterDB{ *db }
-                                        // TODO: check "p.base != nil" ?
+                                        p = &AppConfig_PersisterDB{ *db }
                                 }
                         case "FS":
                                 fs := new(AppConfig_PersisterFS)
@@ -115,8 +102,7 @@ func parseJSONDecodedPersister(v interface{}) (p *AppConfig_Persister) {
                                 } else {
                                         // TODO: error: location is not string
                                 }
-                                p = new(AppConfig_Persister)
-                                p.base = fs
+                                p = fs
                         }//switch(persister type)
                 } else {
                         // TODO: error: 'type' is not a string value
@@ -182,13 +168,13 @@ func loadAppConfigJSON(fn string) (cfg *AppConfig, err os.Error) {
         i = m["persisters"]
         if i != nil {
                 if v, ok := i.(map[string]interface{}); ok {
-                        cfg.Persisters = make(map[string]*AppConfig_Persister)
+                        cfg.Persisters = make(map[string]AppConfig_Persister)
                         for k, ip := range v {
                                 p := parseJSONDecodedPersister(ip)
-                                if s, ok := p.base.(string); ok {
+                                if s, ok := p.(string); ok {
                                         // TODO: check cfg.Databases != nil
                                         // convert named database persister
-                                        p.base = &AppConfig_PersisterDB{ *cfg.Databases[s] }
+                                        p = &AppConfig_PersisterDB{ *cfg.Databases[s] }
                                 }
                                 cfg.Persisters[k] = p
                         }
@@ -211,9 +197,9 @@ func loadAppConfigJSON(fn string) (cfg *AppConfig, err os.Error) {
                 }
         case map[string]interface{}:
                 cfg.Persister = parseJSONDecodedPersister(v)
-                if s, ok := cfg.Persister.base.(string); ok {
+                if s, ok := cfg.Persister.(string); ok {
                         // TODO: check cfg.Databases != nil
-                        cfg.Persister.base = &AppConfig_PersisterDB{ *cfg.Databases[s] }
+                        cfg.Persister = &AppConfig_PersisterDB{ *cfg.Databases[s] }
                 }
         }
 
