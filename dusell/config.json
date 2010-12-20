@@ -1,4 +1,30 @@
 {
   "title": "Dusell - find what you want",
-  "model": "CGI"
+  "model": "CGI",
+  "persister": "test-db",
+  "database": "dusell-test",
+
+  "persisters": {
+      "cmd-test-fs": {
+          "type": "FS",
+          "location": "/tmp/web-test/sessions"
+      },
+      "web-test-fs": {
+          "type": "FS",
+          "location": "/tmp/web/sessions"
+      },
+      "test-db": {
+          "type": "DB",
+          "named": "dusell-test"
+      }
+  },
+
+  "databases": {
+      "dusell-test": {
+          "host": "localhost",
+          "user": "test",
+          "password": "abc",
+          "database": "dusell"
+      }
+  }
 }

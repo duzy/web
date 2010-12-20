@@ -286,10 +286,31 @@ func (app *App) writeHeader(w io.Writer) (err os.Error) {
                         fmt.Fprintf(w, "Set-Cookie: %s\n", v.String())
                 }
         }
+
         for k, v := range app.header {
                 fmt.Fprintf(w, "%s: %s\n", k, v)
         }
+
         fmt.Fprintf(w, "\n")
+        return
+}
+
+/**
+ *  Get database via the name -- specified in the config file like this:
+ *    "databases": {
+ *        "db-name": {
+ *            ...
+ *        }
+ *    }
+ */
+func (app *App) GetDatabase(name string) (db Database, err os.Error) {
+        dbm := GetDBManager()
+        for n, cfg := range app.config.Databases {
+                if n == name {
+                        db, err = dbm.GetDatabase(cfg)
+                        break
+                }
+        }
         return
 }
 
