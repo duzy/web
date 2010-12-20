@@ -103,6 +103,7 @@ func TestSessionPersistent(t *testing.T) {
                 a.Handle("/test", FuncHandler(func(w io.Writer, app *App) {
                         app.SetHeader("Content-Type", "text/html")
                         fmt.Fprint(w, "test-string")
+                        a.Session().Set("test", "test-session");
                 }))
                 a.Exec() // produce the output
 
@@ -129,6 +130,8 @@ func TestSessionPersistent(t *testing.T) {
                 a.Handle("/test", FuncHandler(func(w io.Writer, app *App) {
                         app.SetHeader("Content-Type", "text/plain")
                         fmt.Fprint(w, "test-string")
+                        v := a.Session().Get("test")
+                        if v != "test-session" { t.Error("session-prop: persist error:", v) }
                 }))
                 a.Exec() // produce the output
 
