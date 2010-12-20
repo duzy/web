@@ -170,5 +170,47 @@ func TestViewTemplate(t *testing.T) {
         }
 }
 
+func TestNewAppFromConfig(t *testing.T) {
+        a, err := NewApp("test_app.json")
+        if err != nil { t.Error(err) }
+        if a.config.Title != "test app via json" {
+                t.Error("app from json: title not matched:",a.config.Title)
+        }
+        if a.config.Model != "CGI" {
+                t.Error("app from json: model not matched:",a.config.Model)
+        }
+        if v, ok := a.config.Persister.(*AppConfig_PersisterFS); !ok {
+                t.Error("app from json: not FS persister:",v)
+        } else {
+                if v.Location != "/tmp/web-test/sessions" {
+                        t.Error("app from json: wrong location:",v.Location)
+                }
+        }
 
+        var m *testAppModel
+        if v, ok := a.model.(*CGIModel); !ok {
+                t.Error("app from json: not CGIModel:",a.model)
+        } else {
+                // convert the CGIModel into testAppModel
+                writer := bytes.NewBufferString("")
+                reader := bytes.NewBufferString("")
+                m = &testAppModel{ v, writer, reader }
+                a.model = AppModel(m)
+        }
 
+        a.HandleDefault(NewView("test.tpl"))
+        a.Exec() // produce the output
+
+        str := m.buffer.String()
+        if str=="" { t.Error("app from json: empty output") }
+
+        n := strings.Index(str, "\n\n")
+        if n == -1 {
+                t.Error("expecting \\n\\n in the output")
+        } else {
+                str = str[n+2:len(str)]
+                if str != "<b>title</b>: test app via json\n" {
+                        t.Error("template: wrong output:\n", str)
+                }
+        }
+}

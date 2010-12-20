@@ -38,11 +38,11 @@ func TestLoadAppConfig(t *testing.T) {
         var per interface{}
         per = cfg.Persisters["per_1"]
         if per == nil { t.Error("no persister 'per_1'") }
-        if fmt.Sprintf("%v",per) != "&{/tmp/web/sessions}" {
+        if fmt.Sprintf("%v",per) != "&{/tmp/web-test/sessions}" {
                 t.Error("per_1 is unexpected:", per)
         }
         if v, ok := per.(*AppConfig_PersisterFS); ok {
-                check(t, v.Location, "/tmp/web/sessions")
+                check(t, v.Location, "/tmp/web-test/sessions")
         } else { t.Error("per_1 is not FS persister:", per) }
 
         per = cfg.Persisters["per_2"]
@@ -75,7 +75,7 @@ func TestLoadAppConfig(t *testing.T) {
         check(t, cfg.Database.Database, "dusell")
 
         if v, ok := cfg.Persister.(*AppConfig_PersisterFS); ok {
-                check(t, v.Location, "/tmp/web/sessions")
+                check(t, v.Location, "/tmp/web-test/sessions")
         } else {
                 t.Error("not FS persister:", cfg.Persister)
         }
