@@ -27,12 +27,12 @@ func setupCGIModel(model web.AppModel) {
 func main() {
         flag.Parse()
 
+        defer web.CGIHandleErrors()
+
         homeView := web.NewView(dusell.GetHomePage())
         cpanelView := web.NewView(dusell.GetCPanelPage())
 
-        defer web.CGIHandleErrors()
-
-        app, err := web.NewApp("config.json") //(web.NewCGIModel())
+        app, err := web.NewApp("config.json")
         if err != nil { panic(fmt.Sprintf("NewApp: %v", err)) }
         if app == nil { panic("NewApp: failed") }
         setupCGIModel(app.GetModel())

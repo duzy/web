@@ -18,6 +18,13 @@ type customHandler struct {
         content string
 }
 
+// customViewModel must be a TemplateGetter and FieldsMaker
+type customViewModel struct {
+        template string // eg. <title>{title}</title>
+        field1 string
+        field2 string
+}
+
 func newTestAppModel() (m *testAppModel) {
         cgi := &CGIModel{ make(map[string]string) } //NewCGIModel()
         buffer := bytes.NewBufferString("")
@@ -38,6 +45,26 @@ func (am *testAppModel) RequestReader() (r io.Reader) {
 
 func (h *customHandler) WriteContent(w io.Writer, app *App) {
         fmt.Fprint(w, h.content)
+}
+
+func (v *customViewModel) GetTemplate() string {
+        return v.template
+}
+
+func (v *customViewModel) MakeFields(app *App) (fields interface{}) {
+        db, err := app.GetDatabase("dusell")
+        if err == nil {
+                err = db.Ping()
+        }
+        if err == nil {
+                v.field1 = "bold"
+                v.field2 = "italic"
+        } else {
+                v.field1 = "ERROR"
+                v.field2 = err.String()
+        }
+        fields = v
+        return
 }
 
 func TestFuncHandler(t *testing.T) {
@@ -214,3 +241,37 @@ func TestNewAppFromConfig(t *testing.T) {
                 }
         }
 }
+
+func TestCustomViewModelAndAppGetDatabase(t *testing.T) {
+        a, err := NewApp("test_app.json")
+        if err != nil { t.Error(err) }
+
+        var m *testAppModel
+        if v, ok := a.model.(*CGIModel); !ok {
+                t.Error("app from json: not CGIModel:", a.model)
+        } else {
+                // convert the CGIModel into testAppModel
+                writer := bytes.NewBufferString("")
+                reader := bytes.NewBufferString("")
+                m = &testAppModel{ v, writer, reader }
+                a.model = AppModel(m)
+        }
+
+        cv := &customViewModel{ }
+        cv.template = "<b>{field1}</b>:<i>{field2}</i>"
+
+        a.HandleDefault(NewView(cv))
+        a.Exec() // produce the output
+
+        str := m.buffer.String()
+        n := strings.Index(str, "\n\n")
+        if n == -1 {
+                t.Error("expecting \\n\\n in the output")
+        }
+
+        str = str[n+2:len(str)]
+        if str != "<b>bold</b>:<i>italic</i>" {
+                t.Error("custom-view and db:", str)
+        }
+}
+
