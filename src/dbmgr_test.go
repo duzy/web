@@ -13,7 +13,8 @@ func TestDBManager(t *testing.T) {
         }
 
         db, err := GetDBManager().GetDatabase(cfg)
-        if db == nil { t.Error(err) }
+        if err != nil { t.Error(err); goto finish }
+        if db == nil { t.Error("no db obtained"); goto finish }
         defer db.Close()
 
         err = db.Ping()
@@ -33,4 +34,6 @@ func TestDBManager(t *testing.T) {
         } else {
                 t.Error("not a dbrecord returned")
         }
+
+finish:
 }

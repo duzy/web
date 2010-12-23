@@ -10,14 +10,14 @@ func Test_mysql(t *testing.T) {
         db.Logging = false
         db.Connect("localhost", "test", "abc", "dusell")
         if db.Errno != 0 {
-                t.Error("Error #d %s\n", db.Errno, db.Error)
+                t.Error("Error", db.Errno, db.Error)
                 goto finish
         }
         defer db.Close()
 
         db.Query("SET NAMES utf8")
         if db.Errno != 0 {
-                t.Error("Error #d %s\n", db.Errno, db.Error)
+                t.Error("Error", db.Errno, db.Error)
                 goto finish
         }
 
@@ -29,7 +29,7 @@ c TEXT
 )`
         db.Query(sql)
         if db.Errno != 0 {
-                t.Error("Error #d %s\n", db.Errno, db.Error)
+                t.Error("Error", db.Errno, db.Error)
                 goto finish
         }
 
@@ -39,13 +39,13 @@ INSERT INTO table_test(b,c) VALUES(?,?)
         stmt, _ := db.InitStmt()
         stmt.Prepare(sql)
         if stmt.Errno != 0 {
-                t.Error("Error #d %s\n", stmt.Errno, stmt.Error)
+                t.Error("Error", stmt.Errno, stmt.Error)
                 goto finish
         }
         stmt.BindParams("name", "long text should go here...")
         stmt.Execute()
         if stmt.Errno != 0 {
-                t.Error("Error #d %s\n", stmt.Errno, stmt.Error)
+                t.Error("Error", stmt.Errno, stmt.Error)
                 goto finish
         }
         stmt.Close()
@@ -56,7 +56,7 @@ SELECT a, b, c FROM table_test LIMIT 10
 `
         res, _ := db.Query(sql)
         if db.Errno != 0 {
-                t.Error("Error #d %s\n", db.Errno, db.Error)
+                t.Error("Error", db.Errno, db.Error)
                 goto finish
         }
 
@@ -85,15 +85,15 @@ finish:
 func TestDatabase(t *testing.T) {
         db := NewDatabase()
         err := db.Connect("localhost", "test", "abc", "dusell")
-        if err != nil { t.Error(err) }
+        if err != nil { t.Error(err); goto finish }
         defer db.Close()
 
         err = db.Ping()
-        if err != nil { t.Error(err) }
+        if err != nil { t.Error(err); goto finish }
 
         sql := `SELECT a, b, c FROM table_test LIMIT 10`
         res, err := db.Query(sql)
-        if err != nil { t.Error(err) }
+        if err != nil { t.Error(err); goto finish }
 
         for {
                 row := res.FetchRow();
@@ -102,9 +102,9 @@ func TestDatabase(t *testing.T) {
                         switch res.GetFieldName(k) {
                         case "a":
                         case "b":
-                                if v != "name" { t.Error(v) }
+                                if v != "name" { t.Error(v); goto finish }
                         case "c":
-                                if v != "long text should go here..." { t.Error(v) }
+                                if v != "long text should go here..." { t.Error(v); goto finish }
                         default:
                                 t.Error("unknown field: ", res.GetFieldName(k), v)
                         }
@@ -115,11 +115,11 @@ func TestDatabase(t *testing.T) {
 
         sql = `SELECT a, b, c FROM table_test WHERE a<? LIMIT 10`
         err = stmt.Prepare(sql)
-        if err != nil { t.Error(err) }
+        if err != nil { t.Error(err); goto finish }
 
         stmt.BindParams(10)
         res, err = stmt.Execute()
-        if err != nil { t.Error(err) }
+        if err != nil { t.Error(err); goto finish }
 
         stmt.Close()
 
@@ -138,4 +138,6 @@ func TestDatabase(t *testing.T) {
                         }
                 }
         }
+
+finish:
 }
