@@ -4,7 +4,10 @@
 
 go_tests=`ls src/*_test.go`
 go_files="
+  src/urls.go
   src/apis.go
+  src/findsvc.go
+  src/shopping.go
 "
 
 name=eBay

@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<findItemsByKeywordsResponse xmlns="http://www.ebay.com/marketplace/search/v1/services">
+  <ack>Success</ack>
+  <version>1.8.0</version>
+  <timestamp>2010-12-24T14:15:05.515Z</timestamp>
+  <searchResult count="1">
+    <item>
+      <itemId>220712505183</itemId>
+      <title>Apple iPhone 3G 8GB (Unlocked)Excellent Condition w/GPS</title>
+      <globalId>EBAY-US</globalId>
+      <primaryCategory>
+	<categoryId>3312</categoryId>
+	<categoryName>Cell Phones &amp; Smartphones</categoryName>
+      </primaryCategory>
+      <galleryURL>http://thumbs4.ebaystatic.com/pict/2207125051838080_1.jpg</galleryURL>
+      <viewItemURL>http://cgi.ebay.com/Apple-iPhone-3G-8GB-Unlocked-Excellent-Condition-w-GPS-/220712505183?pt=Cell_Phones</viewItemURL>
+      <productId type="ReferenceID">71354345</productId>
+      <paymentMethod>PayPal</paymentMethod>
+      <autoPay>true</autoPay>
+      <location>USA</location>
+      <country>US</country>
+      <shippingInfo>
+	<shippingServiceCost currencyId="USD">15.0</shippingServiceCost>
+	<shippingType>Flat</shippingType>
+	<shipToLocations>US</shipToLocations>
+	<expeditedShipping>true</expeditedShipping>
+	<oneDayShippingAvailable>false</oneDayShippingAvailable>
+	<handlingTime>1</handlingTime>
+      </shippingInfo>
+      <sellingStatus>
+	<currentPrice currencyId="USD">199.99</currentPrice>
+	<convertedCurrentPrice currencyId="USD">199.99</convertedCurrentPrice>
+	<bidCount>0</bidCount>
+	<sellingState>Active</sellingState>
+	<timeLeft>P0DT0H2M37S</timeLeft>
+      </sellingStatus>
+      <listingInfo>
+	<bestOfferEnabled>false</bestOfferEnabled>
+	<buyItNowAvailable>true</buyItNowAvailable>
+	<buyItNowPrice currencyId="USD">245.0</buyItNowPrice>
+	<convertedBuyItNowPrice currencyId="USD">245.0</convertedBuyItNowPrice>
+	<startTime>2010-12-17T14:17:42.000Z</startTime>
+	<endTime>2010-12-24T14:17:42.000Z</endTime>
+	<listingType>AuctionWithBIN</listingType>
+	<gift>false</gift>
+      </listingInfo>
+      <returnsAccepted>false
+      </returnsAccepted>
+      <galleryPlusPictureURL>http://galleryplus.ebayimg.com/ws/web/220712505183_1_0_1.jpg</galleryPlusPictureURL>
+      <condition>
+	<conditionId>2500</conditionId>
+	<conditionDisplayName>Seller refurbished</conditionDisplayName>
+    </condition>
+    </item>
+  </searchResult>
+  <paginationOutput>
+    <pageNumber>1</pageNumber>
+    <entriesPerPage>1</entriesPerPage>
+    <totalPages>129480</totalPages>
+    <totalEntries>388439</totalEntries>
+  </paginationOutput>
+  <itemSearchURL>http://shop.ebay.com/i.html?_nkw=iPhone&amp;_ddo=1&amp;_ipg=3&amp;_pgn=1</itemSearchURL>
+</findItemsByKeywordsResponse>
