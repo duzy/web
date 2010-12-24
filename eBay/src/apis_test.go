@@ -6,6 +6,18 @@ import (
         //"fmt"
 )
 
+func TestAPIGetVersion(t *testing.T) {
+        eb := NewApp()
+        s, err := eb.GetVersion() // FindService
+        if err != nil { t.Error(err); return }
+
+        n := strings.Index(s, "<version>")
+        if n == -1 { t.Error("no tag: <version>"); return }
+
+        n = strings.Index(s, "</version>")
+        if n == -1 { t.Error("no tag: </version>"); return }
+}
+
 func TestAPIFindItemsByKeywords(t *testing.T) {
         { // XML format
                 eb := NewApp()

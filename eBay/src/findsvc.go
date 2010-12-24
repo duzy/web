@@ -16,6 +16,20 @@ type eBayFindingServiceCall struct {
         // TODO: aspectFilter, domainFilter, itemFilter, outputSelector, ...
 }
 
+type eBayFindingService_GetVersion struct {
+        eBayFindingServiceCall
+}
+
+type eBayFindingService_GetHistograms struct {
+        eBayFindingServiceCall
+        categoryId string
+}
+
+type eBayFindingService_GetSearchKeywordsRecommendation struct {
+        eBayFindingServiceCall
+        keywords string
+}
+
 type eBayFindingService_FindItemsByCategory struct {
         eBayFindingServiceCall
 }
@@ -35,6 +49,13 @@ type eBayFindingService_FindItemsByKeywords struct {
 
 type eBayFindingService_FindItemsAdvanced struct {
         eBayFindingServiceCall
+}
+
+func (call *eBayFindingServiceCall) clear() {
+        call.affiliate = nil
+        call.buyerPostalCode = ""
+        call.paginationInput = nil
+        call.sortOrder = ""
 }
 
 func (call *eBayFindingServiceCall) setEntriesPerPage(count int) {
@@ -95,11 +116,51 @@ func (call *eBayFindingServiceCall) getURL(app *App, oper string) string {
         return u
 }
 
-func (call *eBayFindingService_FindItemsByCategory)   GetURL(app *App) string { return call.getURL(app, "findItemsByCategory") }
-func (call *eBayFindingService_FindItemsByProduct)    GetURL(app *App) string { return call.getURL(app, "findItemsByProduct") }
-func (call *eBayFindingService_FindItemsIneBayStores) GetURL(app *App) string { return call.getURL(app, "findItemsIneBayStores") }
-func (call *eBayFindingService_FindItemsByKeywords)   GetURL(app *App) string { return call.getURL(app, "findItemsByKeywords") }
-func (call *eBayFindingService_FindItemsAdvanced)     GetURL(app *App) string { return call.getURL(app, "findItemsAdvanced") }
+func (call *eBayFindingService_GetVersion)              GetURL(app *App) string { return call.getURL(app, "getVersion") }
+func (call *eBayFindingService_GetHistograms)           GetURL(app *App) string { return call.getURL(app, "getHistograms") }
+func (call *eBayFindingService_GetSearchKeywordsRecommendation) GetURL(app *App) string { return call.getURL(app, "getSearchKeywordsRecommendation") }
+func (call *eBayFindingService_FindItemsByCategory)     GetURL(app *App) string { return call.getURL(app, "findItemsByCategory") }
+func (call *eBayFindingService_FindItemsByProduct)      GetURL(app *App) string { return call.getURL(app, "findItemsByProduct") }
+func (call *eBayFindingService_FindItemsIneBayStores)   GetURL(app *App) string { return call.getURL(app, "findItemsIneBayStores") }
+func (call *eBayFindingService_FindItemsByKeywords)     GetURL(app *App) string { return call.getURL(app, "findItemsByKeywords") }
+func (call *eBayFindingService_FindItemsAdvanced)       GetURL(app *App) string { return call.getURL(app, "findItemsAdvanced") }
+
+func (api *eBayFindingService_GetVersion) GetMessage(app *App) io.Reader {
+        api.clear()
+
+        // http://developer.ebay.com/DevZone/finding/CallRef/getVersion.html
+        msg := api.getMessage("getVersionRequest")
+        fmt.Fprint(msg, "</getVersionRequest>")
+        return io.Reader(msg)
+}
+
+func (api *eBayFindingService_GetHistograms) GetMessage(app *App) io.Reader {
+        api.clear()
+
+        // http://developer.ebay.com/DevZone/finding/CallRef/getHistograms.html
+        msg := api.getMessage("getHistogramsRequest")
+        fmt.Fprintf(msg, "<categoryId>%s</categoryId>", api.categoryId)
+        fmt.Fprint(msg, "</getHistogramsRequest>")
+        return io.Reader(msg)
+}
+
+func (api *eBayFindingService_GetSearchKeywordsRecommendation) GetMessage(app *App) io.Reader {
+        keywords := bytes.NewBuffer(make([]byte, 0, 128))
+        xml.Escape(keywords, []byte(api.keywords))
+
+        api.clear()
+
+        // http://developer.ebay.com/DevZone/finding/CallRef/getSearchKeywordsRecommendation.html
+        msg := api.getMessage("getSearchKeywordsRecommendationRequest")
+        fmt.Fprintf(msg, "<keywords>%s</keywords>", keywords)
+        fmt.Fprint(msg, "</getSearchKeywordsRecommendationRequest>")
+        return io.Reader(msg)
+}
+
+// TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsByCategory.html
+// TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsByProduct.html
+// TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsIneBayStores.html
+// TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsAdvanced.html
 
 func (api *eBayFindingService_FindItemsByKeywords) GetMessage(app *App) io.Reader {
         keywords := bytes.NewBuffer(make([]byte, 0, 128))
@@ -108,6 +169,6 @@ func (api *eBayFindingService_FindItemsByKeywords) GetMessage(app *App) io.Reade
         // http://developer.ebay.com/DevZone/finding/CallRef/findItemsByKeywords.html
         msg := api.getMessage("findItemsByKeywordsRequest")
         fmt.Fprintf(msg, "<keywords>%s</keywords>", keywords)
-        fmt.Fprintf(msg, "</findItemsByKeywordsRequest>")
+        fmt.Fprint(msg, "</findItemsByKeywordsRequest>")
         return io.Reader(msg)
 }

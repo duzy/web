@@ -37,7 +37,7 @@ func NewApp() (eb *App) {
         CertID: "87aab9ab-375c-41e5-bf14-9702fec7dec3",
 
         GlobalID: "EBAY-US",
-        ServiceVersion: "1.0.0",
+        ServiceVersion: "1.8.0",
         }
         return
 }
@@ -64,6 +64,12 @@ func (eb *App) post(call eBayServiceCall) (str string, err os.Error) {
                 r.Body.Close()
                 str = string(b)
         }
+        return
+}
+
+func (eb *App) GetVersion() (str string, err os.Error) {
+        call := &eBayFindingService_GetVersion{}
+        str, err = eb.post(call)
         return
 }
 
