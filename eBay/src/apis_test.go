@@ -7,9 +7,9 @@ import (
 )
 
 func TestAPIFindItemsByKeywords(t *testing.T) {
-        {
+        { // XML format
                 eb := NewApp()
-                eb.ResponseFormat = "XML" // "JSON"
+                eb.ResponseFormat = "XML"
 
                 s, err := eb.FindItemsByKeywords("iPhone", 3)
                 if err != nil { t.Error(err); goto finish }
@@ -31,7 +31,7 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
                 n = strings.Index(s, "<item>")
                 if n == -1 { t.Error("no tag found: <item> [3]"); goto finish }
         }
-        { // JSON test
+        { // JSON format
                 eb := NewApp()
                 eb.ResponseFormat = "JSON"
 
