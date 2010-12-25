@@ -8,11 +8,10 @@ go_files="
   HomePage.go
   CPanelPage.go
 "
-build_pack dusell #> /dev/null && build_testmain dusell
+build_pack dusell && build_testmain dusell
 
 go_files="
   main.go
 "
-build_exe main #> /dev/null
-
-exit 0 # tells ok
+build_exe main
+[[ "$?" == "100" ]] && exit 0 # tells ok

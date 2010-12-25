@@ -19,5 +19,4 @@ go_files="
 "
 
 build_pack mysql && build_testmain mysql
-
-exit 0 # tells ok
+[[ "x$?" == "x100" ]] && exit 0 # tells ok

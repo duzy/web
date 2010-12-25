@@ -118,8 +118,8 @@ _build()
         }
 
     if [[ "x$go_tests" == "x" ]] ; then
-        echo "build_$type: variable go_tests is empty, test pack will not be built."
-        return 4
+        #echo "build_$type: variable go_tests is empty, test pack will not be built."
+        return 100
     fi
 
     (prepare _test)\
