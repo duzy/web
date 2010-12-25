@@ -94,25 +94,26 @@ build_pack()
 
     if [[ "x$name" == "x" ]] ; then
         echo "usage: build_pack name"
-        return
+        return 1
     fi
 
     if [[ "x$go_files" == "x" ]] ; then
-        echo "build_pack: variable go_files is empty"
-        return
+        echo "build_pack: variable go_files is empty, pack will not be built"
+        return 2
     fi
+
+    (prepare _obj)\
+        && 8g -o _obj/$name.8 $go_files \
+        && gopack grc _obj/$name.a _obj/$name.8
 
     if [[ "x$go_tests" == "x" ]] ; then
-        echo "build_pack: variable go_tests is empty"
-        return
+        echo "build_pack: variable go_tests is empty, test pack will not be built."
+        return 3
     fi
 
-    (prepare _obj && prepare _test)\
-        && 8g -o _obj/$name.8 $go_files \
+    (prepare _test)\
         && 8g -o _test/$name.8 $go_files $go_tests \
-        && gopack grc _obj/$name.a _obj/$name.8 \
-        && gopack grc _test/$name.a _test/$name.8 \
-
+        && gopack grc _test/$name.a _test/$name.8
 }
 
 build_testmain()
@@ -120,7 +121,7 @@ build_testmain()
     local name=$1
     local testmain=_testmain.go
 
-    print_testmain.go $name > $testmain
+    print_testmain.go $name > $testmain || return 1
 
     (prepare _test) \
         && 8g -I_test -o _test/main.8 $testmain \

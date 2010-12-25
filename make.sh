@@ -2,6 +2,11 @@
 
 . funs.sh
 
+./make-mysql.sh > /dev/null || {
+    echo "..."
+    exit 1
+}
+
 go_tests=`ls src/*_test.go`
 go_files="
   src/app.go
@@ -15,5 +20,4 @@ go_files="
   src/err.go
 "
 
-build_pack web
-build_testmain web
+build_pack web && build_testmain web
