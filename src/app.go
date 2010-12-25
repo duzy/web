@@ -6,9 +6,25 @@ import (
         "fmt"
         "http"
         "bytes"
-        //"bufio"
         "strings"
 )
+
+const cookieSessionId = "__web_cid" // use a special name for session id
+
+const (
+        PathMatchedNothing = 0
+        PathMatchedFull = 1 // the paths matched exactly
+        PathMatchedParent = 2 // both paths has the same parent: /edit, /edit/1, /edit/2
+)
+
+// Responsible to check two paths to see if they are identical.
+// TODO: think about paths like '/edit/*'
+type PathMatcher interface {
+        PathMatch(p1 string, p2 string) (n int, sub string)
+}
+
+// The default method of matching two path: matched if equal
+type DefaultPathMatcher int
 
 // Make response to a request.
 type Handler interface {
@@ -21,10 +37,6 @@ type SubpathHandler interface {
 
 // Use FuncHandler to wrap a func as a web.Handler.
 type FuncHandler func(w io.Writer, app *App)
-
-func (f FuncHandler) WriteContent(w io.Writer, app *App) {
-        f(w, app)
-}
 
 // Indicate a model of a app, e.g. CGIModel, FCGIModel, SCGIModel, etc.
 type AppModel interface {
@@ -45,6 +57,22 @@ type Cookie struct {
         Path string
         Expires string
         Version string
+}
+
+// Indicate a CGI web session, also holds parameters of a request.
+type App struct {
+        model AppModel
+        config *AppConfig
+        session *Session
+        handlers map[string]Handler
+        pathMatcher PathMatcher
+        query map[string][]string
+        header map[string]string
+        cookies []*Cookie
+}
+
+func (f FuncHandler) WriteContent(w io.Writer, app *App) {
+        f(w, app)
 }
 
 func (c *Cookie) String() string {
@@ -87,20 +115,6 @@ func ParseCookies(s string) (cookies []*Cookie) {
                 }
         }
         return
-}
-
-const cookieSessionId = "__web_cid" // use a special name for session id
-
-// Indicate a CGI web session, also holds parameters of a request.
-type App struct {
-        model AppModel
-        config *AppConfig
-        session *Session
-        handlers map[string]Handler
-        pathMatcher PathMatcher
-        query map[string][]string
-        header map[string]string
-        cookies []*Cookie
 }
 
 // Produce a new web.App to talk to a session.
@@ -330,7 +344,7 @@ func (app *App) Exec() (err os.Error) {
         }()
 
         for k, h := range app.handlers {
-                if m, s := app.pathMatcher.PathMatched(k, app.Path()); m != PathMatchedNothing {
+                if m, s := app.pathMatcher.PathMatch(k, app.Path()); m != PathMatchedNothing {
                         // TODO: rethink about the buffering performance
                         contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
                         contentBuffer.Reset()
@@ -368,22 +382,7 @@ finish:
         return
 }
 
-const (
-        PathMatchedNothing = 0
-        PathMatchedFull = 1 // the paths matched exactly
-        PathMatchedParent = 2 // both paths has the same parent: /edit, /edit/1, /edit/2
-)
-
-// Responsible to check two paths to see if they are identical.
-// TODO: think about paths like '/edit/*'
-type PathMatcher interface {
-        PathMatched(p1 string, p2 string) (n int, sub string)
-}
-
-// The default method of matching two path: matched if equal
-type DefaultPathMatcher int
-
-func (m DefaultPathMatcher) PathMatched(p1 string, p2 string) (n int, sub string) {
+func (m DefaultPathMatcher) PathMatch(p1 string, p2 string) (n int, sub string) {
         n = PathMatchedNothing
         i := strings.Index(p2, p1) // find p1 in p2
         if i == 0 { // p1 is the prefix of p2
@@ -392,7 +391,12 @@ func (m DefaultPathMatcher) PathMatched(p1 string, p2 string) (n int, sub string
                         n = PathMatchedFull
                 } else if 0 < l { // p1(/edit) <=> p2(/edit/1)
                         n = PathMatchedParent
-                        sub = p2[len(p1):len(p1)+l]
+
+                        // For cases of: p1(/) <=> p2(/sync),
+                        //               p1(/buy/a/) <=> p2(/buy/a/1)
+                        if p1[len(p1)-1:len(p1)] == "/" { sub = "/" }
+
+                        sub += p2[len(p1):len(p1)+l]
                 } else if l < 0 {
                         // unmatched
                 }

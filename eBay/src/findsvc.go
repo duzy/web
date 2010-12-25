@@ -1,11 +1,16 @@
 package eBay
 
 import (
+        "os"
+        "io"
         "fmt"
         "xml"
-        "io"
         "bytes"
 )
+
+type FindingService struct {
+        app *App
+}
 
 type eBayFindingServiceCall struct {
         affiliate *Affiliate                    // Optional
@@ -171,4 +176,24 @@ func (api *eBayFindingService_FindItemsByKeywords) GetMessage(app *App) io.Reade
         fmt.Fprintf(msg, "<keywords>%s</keywords>", keywords)
         fmt.Fprint(msg, "</findItemsByKeywordsRequest>")
         return io.Reader(msg)
+}
+
+func (eb *FindingService) GetVersion() (str string, err os.Error) {
+        call := &eBayFindingService_GetVersion{}
+        str, err = eb.app.post(call)
+        return
+}
+
+func (eb *FindingService) FindItemsByKeywords(keywords string, count int) (str string, err os.Error) {
+        call := &eBayFindingService_FindItemsByKeywords{}
+        call.setEntriesPerPage(count)
+        call.keywords = keywords
+        str, err = eb.app.post(call)
+        //fmt.Printf("%s\n%s\n", call.GetURL(eb), call.GetMessage(eb))
+        return
+}
+
+func (eb *FindingService) FindItemsAdvanced() (str string, err os.Error) {
+        // TODO: ...
+        return
 }

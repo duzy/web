@@ -5,12 +5,8 @@ import (
         "io"
         "io/ioutil"
         "http"
+        //"xml"
 )
-
-type eBayServiceCall interface {
-        GetURL(app *App) string
-        GetMessage(app *App) io.Reader
-}
 
 type App struct {
         DEVID string
@@ -20,6 +16,11 @@ type App struct {
         ServiceVersion string
         GlobalID string
         ResponseFormat string
+}
+
+type eBayServiceCall interface {
+        GetURL(app *App) string
+        GetMessage(app *App) io.Reader
 }
 
 func NewApp() (eb *App) {
@@ -67,22 +68,26 @@ func (eb *App) post(call eBayServiceCall) (str string, err os.Error) {
         return
 }
 
-func (eb *App) GetVersion() (str string, err os.Error) {
-        call := &eBayFindingService_GetVersion{}
-        str, err = eb.post(call)
+func (eb *App) NewFindingService() (p *FindingService) {
+        p = &FindingService{ eb }
         return
 }
 
-func (eb *App) FindItemsByKeywords(keywords string, count int) (str string, err os.Error) {
-        call := &eBayFindingService_FindItemsByKeywords{}
-        call.setEntriesPerPage(count)
-        call.keywords = keywords
-        str, err = eb.post(call)
-        //fmt.Printf("%s\n%s\n", call.GetURL(eb), call.GetMessage(eb))
+func (eb *App) ParseItems(str string) (items []Item) {
+        switch eb.ResponseFormat {
+        case "JSON":
+                items = eb.parseItemsXML(str)
+        case "XML":
+                items = eb.parseItemsJSON(str)
+        }
         return
 }
 
-func (eb *App) FindItemsAdvanced() (str string, err os.Error) {
+func (eb *App) parseItemsXML(str string) (items []Item) {
         // TODO: ...
+        return
+}
+
+func (eb *App) parseItemsJSON(str string) (items []Item) {
         return
 }

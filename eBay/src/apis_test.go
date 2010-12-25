@@ -8,7 +8,8 @@ import (
 
 func TestAPIGetVersion(t *testing.T) {
         eb := NewApp()
-        s, err := eb.GetVersion() // FindService
+        fs := eb.NewFindingService()
+        s, err := fs.GetVersion() // FindService
         if err != nil { t.Error(err); return }
 
         n := strings.Index(s, "<version>")
@@ -23,7 +24,9 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
                 eb := NewApp()
                 eb.ResponseFormat = "XML"
 
-                s, err := eb.FindItemsByKeywords("iPhone", 3)
+                fs := eb.NewFindingService()
+
+                s, err := fs.FindItemsByKeywords("iPhone", 3)
                 if err != nil { t.Error(err); goto finish }
 
                 //fmt.Printf("%s\n", s)
@@ -47,7 +50,9 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
                 eb := NewApp()
                 eb.ResponseFormat = "JSON"
 
-                s, err := eb.FindItemsByKeywords("Nokia N9", 3)
+                fs := eb.NewFindingService()
+
+                s, err := fs.FindItemsByKeywords("Nokia N9", 3)
                 if err != nil { t.Error(err); goto finish }
 
                 //fmt.Printf("%s\n", s)

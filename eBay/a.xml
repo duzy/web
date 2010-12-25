@@ -44,13 +44,12 @@
 	<listingType>AuctionWithBIN</listingType>
 	<gift>false</gift>
       </listingInfo>
-      <returnsAccepted>false
-      </returnsAccepted>
+      <returnsAccepted>false</returnsAccepted>
       <galleryPlusPictureURL>http://galleryplus.ebayimg.com/ws/web/220712505183_1_0_1.jpg</galleryPlusPictureURL>
       <condition>
 	<conditionId>2500</conditionId>
 	<conditionDisplayName>Seller refurbished</conditionDisplayName>
-    </condition>
+      </condition>
     </item>
   </searchResult>
   <paginationOutput>
