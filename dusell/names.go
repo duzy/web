@@ -1,8 +1,8 @@
 package dusell
 
 const (
-        TemplateHomePage = "home.tpl"
-        TemplateCPanelPage = "cpanel.tpl"
-        TemplateOrderView = "order.tpl"
+        TemplateHomePage = "templates/home.tpl"
+        TemplateCPanelPage = "templates/cpanel.tpl"
+        TemplateOrderView = "templates/order.tpl"
         // TODO: more...
 )

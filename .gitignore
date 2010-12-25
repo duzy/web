@@ -1,5 +1,6 @@
 *.8
 *~
+_bin
 _obj
 _test
 _testmain.go

@@ -88,32 +88,53 @@ print_testmain.go()
     echo '}'
 }
 
-build_pack()
+_build()
 {
-    local name=$1
+    local type=$1
+    local name=$2
 
-    if [[ "x$name" == "x" ]] ; then
-        echo "usage: build_pack name"
+    if [[ "x$type" == "x" ]] ; then
+        echo "build type unspecified!"
         return 1
     fi
 
-    if [[ "x$go_files" == "x" ]] ; then
-        echo "build_pack: variable go_files is empty, pack will not be built"
+    if [[ "x$name" == "x" ]] ; then
+        echo "usage: build_$type name"
         return 2
     fi
 
-    (prepare _obj)\
+    if [[ "x$go_files" == "x" ]] ; then
+        echo "build_$type: variable go_files is empty, pack will not be built"
+        return 3
+    fi
+
+    (prepare _obj) \
         && 8g -o _obj/$name.8 $go_files \
-        && gopack grc _obj/$name.a _obj/$name.8
+        && {
+            [[ "$type" == "pack" ]] && gopack grc _obj/$name.a _obj/$name.8
+            [[ "$type" == "exe" ]] && {
+                prepare _bin && 8l -o _bin/$name _obj/$name.8
+            }
+        }
 
     if [[ "x$go_tests" == "x" ]] ; then
-        echo "build_pack: variable go_tests is empty, test pack will not be built."
-        return 3
+        echo "build_$type: variable go_tests is empty, test pack will not be built."
+        return 4
     fi
 
     (prepare _test)\
         && 8g -o _test/$name.8 $go_files $go_tests \
         && gopack grc _test/$name.a _test/$name.8
+}
+
+build_pack()
+{
+    _build pack $@
+}
+
+build_exe()
+{
+    _build exe $@
 }
 
 build_testmain()
