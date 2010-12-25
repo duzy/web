@@ -7,6 +7,6 @@ import (
 
 func dusell_run(app *web.App) {
         cpanelView := web.NewView(dusell.GetCPanelPage())
-        app.Handle("/cp", cpanelView)
+        app.HandleDefault(cpanelView)
         app.Exec()
 }
