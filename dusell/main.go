@@ -2,7 +2,6 @@ package main
 
 import (
         "../_obj/web"
-        "./_obj/dusell"
         "flag"
         "fmt"
         "os"
@@ -29,22 +28,10 @@ func main() {
 
         defer web.CGIHandleErrors()
 
-        homeView := web.NewView(dusell.GetHomePage())
-        cpanelView := web.NewView(dusell.GetCPanelPage())
-
         app, err := web.NewApp("config.json")
         if err != nil { panic(fmt.Sprintf("NewApp: %v", err)) }
         if app == nil { panic("NewApp: failed") }
         setupCGIModel(app.GetModel())
 
-        app.HandleDefault(homeView)
-        app.Handle("/cp", cpanelView)
-        //app.Handle("/order", OrderHandler)
-        //app.Handle("/pay", PaymentHandler)
-        //app.Handle("/cats", CatalogsHandler)
-        //app.Handle("/cat", GetItemList)
-        //app.Handle("/get_item", GetItem)
-        //app.Handle("/signin", SigninHandler)
-        //app.Handle("/signup", SignupHandler)
-        app.Exec()
+        dusell_run(app)
 }

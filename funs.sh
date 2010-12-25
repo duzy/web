@@ -109,11 +109,11 @@ _build()
     fi
 
     (prepare _obj) \
-        && 8g -o _obj/$name.8 $go_files \
+        && 8g $go_incs -o _obj/$name.8 $go_files \
         && {
             [[ "$type" == "pack" ]] && gopack grc _obj/$name.a _obj/$name.8
             [[ "$type" == "exe" ]] && {
-                prepare _bin && 8l -o _bin/$name _obj/$name.8
+                prepare _bin && 8l $go_libs -o _bin/$name _obj/$name.8
             }
         }
 
