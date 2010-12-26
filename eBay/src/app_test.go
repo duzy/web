@@ -46,7 +46,9 @@ func TestXMLUnmarshalFindItemsResponse(t *testing.T) {
         if v.PaginationOutput.TotalPages != 1579 { t.Error("paginationOutput.totalPages:",v.PaginationOutput.TotalPages); return }
         if v.PaginationOutput.TotalEntries != 4735 { t.Error("paginationOutput.totalEntries:",v.PaginationOutput.TotalEntries); return }
 
-        jv := &findItemsJSONResponse{}
+        jv := &struct {
+                V []findItemsJSONResponse "findItemsByKeywordsResponse"
+        }{}
         err = json.Unmarshal([]byte(j), jv)
         if err != nil { t.Error(err); return }
 
@@ -82,7 +84,7 @@ func TestXMLUnmarshalFindItemsResponse(t *testing.T) {
         if ja.PaginationOutput[0].TotalPages[0] != "1577" { t.Error("json: PaginationOutput:",ja.PaginationOutput[0]); return }
         if ja.PaginationOutput[0].TotalEntries[0] != "4730" { t.Error("json: PaginationOutput:",ja.PaginationOutput[0]); return }
 
-        v = noJSON(jv)
+        v = noJSON(ja)
         if v.Ack != "Success" { t.Error("nojson: ack:",v.Ack); return }
         if v.Version != "1.8.0" { t.Error("nojson: version:",v.Version); return }
         if v.Timestamp != "2010-12-26T06:17:22.587Z" { t.Error("nojson: timestamp:",v.Timestamp); return }
@@ -122,6 +124,8 @@ func TestAppParseResponse(t *testing.T) {
         if err != nil { t.Error(err); return }
 
         res, err := a.ParseResponse(xml)
+        //fmt.Printf("%v\n", res)
+
         if err != nil { t.Error(err); return }
         if res == nil { t.Error("no xml response"); return }
         if len(res.SearchResult.Item) != 3 {
@@ -136,9 +140,11 @@ func TestAppParseResponse(t *testing.T) {
         json, err := svc.FindItemsByKeywords("Nokia N8", 3)
         if err != nil { t.Error(err); return }
 
-        //fmt.Printf("json: %v",json)
+        //fmt.Printf("json: %v\n",json)
 
         res, err = a.ParseResponse(json)
+        //fmt.Printf("%v\n", res)
+
         if err != nil { t.Error(err); return }
         if res == nil { t.Error("no json response"); return }
         if len(res.SearchResult.Item) != 3 {

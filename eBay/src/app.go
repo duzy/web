@@ -10,7 +10,7 @@ import (
         "json"
         "strconv"
         "strings"
-        //"fmt"
+        "fmt"
 )
 
 type App struct {
@@ -74,11 +74,13 @@ func (eb *App) post(call eBayServiceCall) (str string, err os.Error) {
         return
 }
 
+// NewFindingService returns a new eBay.FindingService.
 func (eb *App) NewFindingService() (p *FindingService) {
         p = &FindingService{ eb }
         return
 }
 
+// ParseResponse parse text response of an eBay operation.
 func (eb *App) ParseResponse(str string) (res *findItemsResponse, err os.Error) {
         switch eb.ResponseFormat {
         case "JSON":
@@ -91,19 +93,111 @@ func (eb *App) ParseResponse(str string) (res *findItemsResponse, err os.Error) 
         return
 }
 
+// parseXMLResponse parse XML format response
 func (eb *App) parseXMLResponse(str string) (res *findItemsResponse, err os.Error) {
-        r := new(findItemsResponse)
-        err = xml.Unmarshal(bytes.NewBufferString(str), r)
-        if err == nil { res = r }
+        p := xml.NewParser(bytes.NewBufferString(str))
+
+        var start *xml.StartElement
+        for {
+                tok, err := p.Token()
+                if err != nil { return }
+                if t, ok := tok.(xml.StartElement); ok {
+                        start = &t
+                        break;
+                }
+        }
+
+        if start == nil {
+                err = os.NewError("no xml.StartElement found")
+                return
+        }
+
+        res = new(findItemsResponse)
+
+        var v interface{}
+        switch start.Name.Local {
+        case "findItemsByCategoryResponse":
+                v = &struct {
+                        XMLName xml.Name "findItemsByCategoryResponse"
+                        *findItemsResponse
+                }{ xml.Name{}, res, }
+        case "findItemsByProductResponse":
+                v = &struct {
+                        XMLName xml.Name "findItemsByProductResponse"
+                        *findItemsResponse
+                }{ xml.Name{}, res, }
+        case "findItemsIneBayStoresResponse":
+                v = &struct {
+                        XMLName xml.Name "findItemsIneBayStoresResponse"
+                        *findItemsResponse
+                }{ xml.Name{}, res, }
+        case "findItemsByKeywordsResponse":
+                v = &struct {
+                        XMLName xml.Name "findItemsByKeywordsResponse"
+                        *findItemsResponse
+                }{ xml.Name{}, res, }
+        case "findItemsAdvancedResponse":
+                v = &struct {
+                        XMLName xml.Name "findItemsAdvancedResponse"
+                        *findItemsResponse
+                }{ xml.Name{}, res, }
+                // TODO: more response
+        }
+
+        if v == nil {
+                err = os.NewError(fmt.Sprintf("don't know how to parse '%s'",start.Name))
+                return
+        }
+
+        err = p.Unmarshal(v, start)
         return
 }
 
+func getJSONResponseType(str string) (typ string) {
+        n := strings.Index(str, `"` /*`{"`*/)
+        if n == -1 { return }
+
+        str = str[n+1 /*2*/:]
+        n = strings.Index(str, `":`)
+        if n == -1 { return }
+
+        typ = str[0:n]
+        return
+}
+
+// parseJSONResponse parse JSON format response
 func (eb *App) parseJSONResponse(str string) (res *findItemsResponse, err os.Error) {
-        r := new(findItemsJSONResponse)
-        err = json.Unmarshal([]byte(str), r)
-        if err == nil {
-                res = noJSON(r)
+        ra := make([]*findItemsJSONResponse, 1)
+
+        var v interface{}
+        switch t := getJSONResponseType(str[0:]); t {
+        case "findItemsByCategoryResponse":
+                v = &struct {
+                        V []*findItemsJSONResponse "findItemsByCategoryResponse"
+                }{ ra }
+        case "findItemsByProductResponse":
+                v = &struct {
+                        V []*findItemsJSONResponse "findItemsByProductResponse"
+                }{ ra }
+        case "findItemsIneBayStoresResponse":
+                v = &struct {
+                        V []*findItemsJSONResponse "findItemsIneBayStoresResponse"
+                }{ ra }
+        case "findItemsByKeywordsResponse":
+                v = &struct {
+                        V []*findItemsJSONResponse "findItemsByKeywordsResponse"
+                }{ ra }
+        case "findItemsAdvancedResponse":
+                v = &struct {
+                        V []*findItemsJSONResponse "findItemsAdvancedResponse"
+                }{ ra }
+        default:
+                err = os.NewError("unknown JSON response: '"+t+"'")
+                return
         }
+
+        err = json.Unmarshal([]byte(str), v)
+        if err == nil { res = noJSON(ra[0]) }
         return
 }
 
@@ -112,29 +206,29 @@ func stof(s string) (f float) { f, _ = strconv.Atof(s); return }
 func stob(s string) (b bool) { b, _ = strconv.Atob(s); return }
 func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
         res = &findItemsResponse{
-        Ack: r.V[0].Ack[0],
-        Version: r.V[0].Version[0],
-        Timestamp: r.V[0].Timestamp[0],
-        //SearchResult: { make([]Item, len(r.V[0].SearchResult[0].Item)) },
-        ItemSearchURL: r.V[0].ItemSearchURL[0],
+        Ack: r.Ack[0],
+        Version: r.Version[0],
+        Timestamp: r.Timestamp[0],
+        //SearchResult: { make([]Item, len(r.SearchResult[0].Item)) },
+        ItemSearchURL: r.ItemSearchURL[0],
         PaginationOutput: PaginationOutput{
-                PageNumber: stoi(r.V[0].PaginationOutput[0].PageNumber[0]),
-                EntriesPerPage: stoi(r.V[0].PaginationOutput[0].EntriesPerPage[0]),
-                TotalPages: stoi(r.V[0].PaginationOutput[0].TotalPages[0]),
-                TotalEntries: stoi(r.V[0].PaginationOutput[0].TotalEntries[0]),
+                PageNumber: stoi(r.PaginationOutput[0].PageNumber[0]),
+                EntriesPerPage: stoi(r.PaginationOutput[0].EntriesPerPage[0]),
+                TotalPages: stoi(r.PaginationOutput[0].TotalPages[0]),
+                TotalEntries: stoi(r.PaginationOutput[0].TotalEntries[0]),
                 },
         }
 
-        res.SearchResult.Item = make([]Item, len(r.V[0].SearchResult[0].Item))
+        res.SearchResult.Item = make([]Item, len(r.SearchResult[0].Item))
         
-        for n, i := range r.V[0].SearchResult[0].Item {
+        for n, i := range r.SearchResult[0].Item {
                 res.SearchResult.Item[n] = Item{
                 ItemId: i.ItemId[0],
                 Title: i.Title[0],
                 //GlobalId: i.GlobalId[0],
                 PrimaryCategory: Category{
-                        Id: i.PrimaryCategory[0].CategoryId[0],
-                        Name: i.PrimaryCategory[0].CategoryName[0],
+                        CategoryId: i.PrimaryCategory[0].CategoryId[0],
+                        CategoryName: i.PrimaryCategory[0].CategoryName[0],
                         },
                 GalleryURL: i.GalleryURL[0],
                 ViewItemURL: i.ViewItemURL[0],
@@ -176,8 +270,8 @@ func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
                         },
                 ReturnsAccepted: stob(i.ReturnsAccepted[0]),
                 Condition: Condition{
-                        Id: i.Condition[0].ConditionId[0],
-                        DisplayName: i.Condition[0].ConditionDisplayName[0],
+                        ConditionId: i.Condition[0].ConditionId[0],
+                        ConditionDisplayName: i.Condition[0].ConditionDisplayName[0],
                         },
                 }
         }//for (items)

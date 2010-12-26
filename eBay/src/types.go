@@ -1,6 +1,6 @@
 package eBay
 
-import "xml"
+//import "xml"
 
 type Affiliate struct {
         CustomId string
@@ -52,17 +52,17 @@ type ListingInfo struct {
 }
 
 type Condition struct {
-        Id string "conditionId"
-        DisplayName string "conditionDisplayName"
+        ConditionId string
+        ConditionDisplayName string
 }
 
 type Category struct {
-        Id string "categoryId"
-        Name string "categoryName"
+        CategoryId string
+        CategoryName string
 }
 
 type Item struct {
-        ItemId string "itemId"
+        ItemId string
         Title string
         PrimaryCategory Category
         GalleryURL string
@@ -80,9 +80,7 @@ type Item struct {
         Condition Condition
 }
 
-//type findItemsByKeywordsResponse struct {
 type findItemsResponse struct {
-        XMLName xml.Name "findItemsByKeywordsResponse"
         Ack string
         Version string
         Timestamp string
@@ -92,70 +90,68 @@ type findItemsResponse struct {
 }
 
 type findItemsJSONResponse struct {
-        V []struct {
-                Ack []string
-                Version []string
-                Timestamp []string
-                SearchResult []struct {
-                        Item []struct {
-                                ItemId []string
-                                Title []string
-                                GlobalId []string
-                                PrimaryCategory []struct {
-                                        CategoryId []string
-                                        CategoryName []string
+        Ack []string
+        Version []string
+        Timestamp []string
+        SearchResult []struct {
+                Item []struct {
+                        ItemId []string
+                        Title []string
+                        GlobalId []string
+                        PrimaryCategory []struct {
+                                CategoryId []string
+                                CategoryName []string
+                        }
+                        GalleryURL []string
+                        ViewItemURL []string
+                        PaymentMethod []string
+                        AutoPay []string
+                        Location []string
+                        Country []string
+                        ShippingInfo []struct {
+                                ShippingServiceCost []struct {
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
                                 }
-                                GalleryURL []string
-                                ViewItemURL []string
-                                PaymentMethod []string
-                                AutoPay []string
-                                Location []string
-                                Country []string
-                                ShippingInfo []struct {
-                                        ShippingServiceCost []struct {
-                                                CurrencyId string "@currencyId"
-                                                Amount string "__value__"
-                                        }
-                                        ShippingType []string
-                                        ShipToLocations []string
-                                        ExpeditedShipping []string
-                                        OneDayShippingAvailable []string
-                                        HandlingTime []string
+                                ShippingType []string
+                                ShipToLocations []string
+                                ExpeditedShipping []string
+                                OneDayShippingAvailable []string
+                                HandlingTime []string
+                        }
+                        SellingStatus []struct {
+                                CurrentPrice []struct {
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
                                 }
-                                SellingStatus []struct {
-                                        CurrentPrice []struct {
-                                                CurrencyId string "@currencyId"
-                                                Amount string "__value__"
-                                        }
                                         ConvertedCurrentPrice []struct {
-                                                CurrencyId string "@currencyId"
-                                                Amount string "__value__"
-                                        }
-                                        BidCount []string
-                                        SellingState []string
-                                        TimeLeft []string
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
                                 }
-                                ListingInfo []struct {
-                                        BestOfferEnabled []string
-                                        BuyItNowAvailable []string
-                                        StartTime []string
-                                        EndTime []string
-                                        ListingType []string
-                                        Gift []string
-                                }
-                                ReturnsAccepted []string
-                                Condition []struct {
-                                        ConditionId []string
-                                        ConditionDisplayName []string
-                                }
+                                BidCount []string
+                                SellingState []string
+                                TimeLeft []string
+                        }
+                        ListingInfo []struct {
+                                BestOfferEnabled []string
+                                BuyItNowAvailable []string
+                                StartTime []string
+                                EndTime []string
+                                ListingType []string
+                                Gift []string
+                        }
+                        ReturnsAccepted []string
+                        Condition []struct {
+                                ConditionId []string
+                                ConditionDisplayName []string
                         }
                 }
-                PaginationOutput []struct {
-                        PageNumber []string
-                        EntriesPerPage []string
-                        TotalPages []string
-                        TotalEntries []string
-                }
-                ItemSearchURL []string
-        } "findItemsByKeywordsResponse"
+        }
+        PaginationOutput []struct {
+                PageNumber []string
+                EntriesPerPage []string
+                TotalPages []string
+                TotalEntries []string
+        }
+        ItemSearchURL []string
 }
