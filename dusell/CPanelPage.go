@@ -83,8 +83,20 @@ func (v *cpaneleBayTest) GetTemplate() (str string) {
         fs := eb.NewFindingService()
         xml, err := fs.FindItemsByKeywords("Nokia N8", 3)
         if err == nil {
-                r := eb.ParseItems(xml)
-                str = fmt.Sprintf("%v", r)
+                r, err := eb.ParseResponse(xml)
+                if err != nil {
+                        str = fmt.Sprintf("<b>ERROR:</b> %v", err)
+                        return
+                }
+                str = "<table>"
+                for n, i := range r.SearchResult.Item {
+                        str += "<tr>"
+                        str += fmt.Sprintf("<td>%v</td>", n)
+                        str += fmt.Sprintf(`<td><a href="%s"><img src="%s"/></a></td>`, i.ViewItemURL, i.GalleryURL)
+                        str += fmt.Sprintf("<td>%s</td>", i.Title)
+                        str += "</tr>"
+                }
+                str += "</table>"
         } else {
                 str = fmt.Sprintf("<b>ERROR:</b> %v", err)
         }
