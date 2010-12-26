@@ -14,7 +14,8 @@ func check(t *testing.T, a, b interface{}) {
 
 func TestLoadAppConfig(t *testing.T) {
         cfg, err := LoadAppConfig("test_app.json")
-        if err != nil { t.Error(err) }
+        if err != nil { t.Error(err); return }
+        if cfg == nil { t.Error("no AppConfig loaded"); return }
 
         check(t, cfg.Title, "test app via json")
         check(t, cfg.Model, "CGI")

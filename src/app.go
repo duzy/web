@@ -132,6 +132,10 @@ func NewApp(m interface {}) (app *App, err os.Error) {
                 var cfg *AppConfig
                 cfg, err = LoadAppConfig(v)
                 if err == nil {
+                        if cfg == nil {
+                                err = os.NewError(fmt.Sprintf("can't load app config '%v'", v))
+                                return
+                        }
                         // assign default FS persister if nil
                         if cfg.Persister == nil {
                                 cfg.Persister = defaultPersisterConfigFS
