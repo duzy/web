@@ -1,5 +1,7 @@
 package eBay
 
+import "xml"
+
 type Affiliate struct {
         CustomId string
         NetworkId string
@@ -11,16 +13,21 @@ type PaginationInput struct {
         PageNumber int
 }
 
-
+type PaginationOutput struct {
+        PageNumber int
+        EntriesPerPage int
+        TotalPages int
+        TotalEntries int
+}
 
 type Money struct {
-        CurrencyId string // USD, EUR, etc...
-        Amount float
+        CurrencyId string "attr" // USD, EUR, etc...
+        Amount float "chardata"
 }
 
 type ShippingInfo struct {
-        ServiceCost Money
-        Type string // Flat, Air ...
+        ShippingServiceCost Money
+        ShippingType string // Flat, Air ...
         ShipToLocations string
         ExpeditedShipping bool
         OneDayShippingAvailable bool
@@ -28,27 +35,41 @@ type ShippingInfo struct {
 }
 
 type SellingStatus struct {
+        CurrentPrice Money
+        ConvertedCurrentPrice Money
+        BidCount int
+        SellingState string
+        TimeLeft string
 }
 
 type ListingInfo struct {
+        BestOfferEnabled bool
+        BuyItNowAvailable bool
+        StartTime string
+        EndTime string
+        ListingType string
+        Gift bool
 }
 
 type Condition struct {
+        Id string "conditionId"
+        DisplayName string "conditionDisplayName"
 }
 
 type Category struct {
-        Id string
-        Name string
+        Id string "categoryId"
+        Name string "categoryName"
 }
 
 type Item struct {
-        Id string
+        ItemId string "itemId"
         Title string
-        PrimaryCategory *Category
+        PrimaryCategory Category
         GalleryURL string
         ViewItemURL string
         ProductId string
         PaymentMethod string
+        AutoPay bool
         Location string
         Country string
         ShippingInfo ShippingInfo
@@ -57,4 +78,84 @@ type Item struct {
         ReturnsAccepted bool
         GalleryPlusPictureURL string
         Condition Condition
+}
+
+//type findItemsByKeywordsResponse struct {
+type findItemsResponse struct {
+        XMLName xml.Name "findItemsByKeywordsResponse"
+        Ack string
+        Version string
+        Timestamp string
+        SearchResult struct { Item []Item }
+        ItemSearchURL string
+        PaginationOutput PaginationOutput
+}
+
+type findItemsJSONResponse struct {
+        V []struct {
+                Ack []string
+                Version []string
+                Timestamp []string
+                SearchResult []struct {
+                        Item []struct {
+                                ItemId []string
+                                Title []string
+                                GlobalId []string
+                                PrimaryCategory []struct {
+                                        CategoryId []string
+                                        CategoryName []string
+                                }
+                                GalleryURL []string
+                                ViewItemURL []string
+                                PaymentMethod []string
+                                AutoPay []string
+                                Location []string
+                                Country []string
+                                ShippingInfo []struct {
+                                        ShippingServiceCost []struct {
+                                                CurrencyId string "@currencyId"
+                                                Amount string "__value__"
+                                        }
+                                        ShippingType []string
+                                        ShipToLocations []string
+                                        ExpeditedShipping []string
+                                        OneDayShippingAvailable []string
+                                        HandlingTime []string
+                                }
+                                SellingStatus []struct {
+                                        CurrentPrice []struct {
+                                                CurrencyId string "@currencyId"
+                                                Amount string "__value__"
+                                        }
+                                        ConvertedCurrentPrice []struct {
+                                                CurrencyId string "@currencyId"
+                                                Amount string "__value__"
+                                        }
+                                        BidCount []string
+                                        SellingState []string
+                                        TimeLeft []string
+                                }
+                                ListingInfo []struct {
+                                        BestOfferEnabled []string
+                                        BuyItNowAvailable []string
+                                        StartTime []string
+                                        EndTime []string
+                                        ListingType []string
+                                        Gift []string
+                                }
+                                ReturnsAccepted []string
+                                Condition []struct {
+                                        ConditionId []string
+                                        ConditionDisplayName []string
+                                }
+                        }
+                }
+                PaginationOutput []struct {
+                        PageNumber []string
+                        EntriesPerPage []string
+                        TotalPages []string
+                        TotalEntries []string
+                }
+                ItemSearchURL []string
+        } "findItemsByKeywordsResponse"
 }

@@ -83,7 +83,7 @@ func (v *cpaneleBayTest) GetTemplate() (str string) {
         fs := eb.NewFindingService()
         xml, err := fs.FindItemsByKeywords("Nokia N8", 3)
         if err == nil {
-                r := fs.ParseSearchResult(xml)
+                r := eb.ParseItems(xml)
                 str = fmt.Sprintf("%v", r)
         } else {
                 str = fmt.Sprintf("<b>ERROR:</b> %v", err)

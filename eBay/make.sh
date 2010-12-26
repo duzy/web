@@ -16,7 +16,7 @@ fi
 go_tests=`ls src/*_test.go`
 go_files="
   src/urls.go
-  src/apis.go
+  src/app.go
   src/types.go
   src/findsvc.go
   src/shopping.go
