@@ -14,8 +14,10 @@ import (
 )
 
 type Cacher interface {
-        CacheCategory(category *Category) (err os.Error)
-        CacheItem(item *Item) (err os.Error)
+        CacheCategory(cat *Category) (err os.Error)
+        CacheItem(itm *Item) (err os.Error)
+        GetCategory(id string) (cat *Category, err os.Error)
+        GetItem(id string) (itm *Item, err os.Error)
 }
 
 type App struct {

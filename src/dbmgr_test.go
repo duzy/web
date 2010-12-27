@@ -5,7 +5,7 @@ import (
 )
 
 func TestDBManager(t *testing.T) {
-        var cfg = &AppConfig_Database {
+        var cfg = &DatabaseConfig {
         Host: "localhost",
         User: "test",
         Password: "abc",

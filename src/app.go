@@ -162,7 +162,7 @@ func newAppConfigForAppModel(am AppModel) (config *AppConfig) {
         switch am.(type) {
         case *CGIModel: config.Model = "CGI"
         }
-        config.Persister = AppConfig_Persister(&AppConfig_PersisterFS{ Location: "/tmp/web/sessions", })
+        config.Persister = PersisterConfig(&PersisterConfigFS{ Location: "/tmp/web/sessions", })
         return
 }
 

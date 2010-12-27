@@ -7,7 +7,7 @@ import (
 
 type dbrecord struct {
         Database
-        cfg *AppConfig_Database
+        cfg *DatabaseConfig
         useCount int
 }
 
@@ -21,7 +21,7 @@ var dbmanager = &DBManager{
 
 func GetDBManager() *DBManager { return dbmanager }
 
-func (dbm *DBManager) findDatabase(cfg *AppConfig_Database) (rec *dbrecord) {
+func (dbm *DBManager) findDatabase(cfg *DatabaseConfig) (rec *dbrecord) {
         for _, r := range dbm.dbs {
                 if r.cfg.Host == cfg.Host &&
                         r.cfg.User == cfg.User &&
@@ -34,7 +34,7 @@ func (dbm *DBManager) findDatabase(cfg *AppConfig_Database) (rec *dbrecord) {
         return
 }
 
-func (dbm *DBManager) GetDatabase(cfg *AppConfig_Database) (db Database, err os.Error) {
+func (dbm *DBManager) GetDatabase(cfg *DatabaseConfig) (db Database, err os.Error) {
         rec := dbm.findDatabase(cfg)
         if rec == nil {
                 rec = &dbrecord{ NewDatabase(), cfg, 1 }

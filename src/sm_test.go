@@ -5,12 +5,12 @@ import (
         "os"
 )
 
-var configFS = &AppConfig_PersisterFS{
+var configFS = &PersisterConfigFS{
 Location: "/tmp/web-test/PersisterFS",
 }
 
-var configDB = &AppConfig_PersisterDB{
-        AppConfig_Database {
+var configDB = &PersisterConfigDB{
+        DatabaseConfig {
         Host: "localhost",
         User: "test",
         Password: "abc",
@@ -18,7 +18,7 @@ var configDB = &AppConfig_PersisterDB{
         },
 }
 
-func testSaveLoadSession(t *testing.T, cfg AppConfig_Persister) (sid string) {
+func testSaveLoadSession(t *testing.T, cfg PersisterConfig) (sid string) {
         {
                 s := NewSession()
                 sid = s.Id()

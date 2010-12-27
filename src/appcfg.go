@@ -43,41 +43,41 @@ type AppConfig struct {
         /**
          * Session persister driver.
          */
-        Persister AppConfig_Persister
+        Persister PersisterConfig
 
         /**
          * Default database config.
          */
-        Database *AppConfig_Database
+        Database *DatabaseConfig
 
         /**
          * Named persisters.
          */
-        Persisters map[string]AppConfig_Persister
+        Persisters map[string]PersisterConfig
 
         /**
          * Named databases.
          */
-        Databases map[string]*AppConfig_Database
+        Databases map[string]*DatabaseConfig
 }
 
 /**
- *  *AppConfig_PersisterFS or *AppConfig_PersisterDB
+ *  *PersisterConfigFS or *PersisterConfigDB
  */
-type AppConfig_Persister interface{}
+type PersisterConfig interface{}
 
-type AppConfig_PersisterFS struct {
+type PersisterConfigFS struct {
         /**
          *  File location(must be a directory) for storing sessions.
          */
         Location string
 }
 
-type AppConfig_PersisterDB struct {
-        AppConfig_Database
+type PersisterConfigDB struct {
+        DatabaseConfig
 }
 
-type AppConfig_Database struct {
+type DatabaseConfig struct {
         Host string
         User string
         Password string
@@ -111,31 +111,31 @@ func loadAppConfigJSON(fn string) (cfg *AppConfig, err os.Error) {
         if err != nil { return }
 
         cfg = new(AppConfig)
-        cfg.Databases = make(map[string]*AppConfig_Database)
+        cfg.Databases = make(map[string]*DatabaseConfig)
         for k, d := range c.Databases {
-                cfg.Databases[k] = &AppConfig_Database{
+                cfg.Databases[k] = &DatabaseConfig{
                 Host: d.Host,
                 User: d.User,
                 Password: d.Password,
                 Database: d.Database,
                 }
         }
-        cfg.Persisters = make(map[string]AppConfig_Persister)
+        cfg.Persisters = make(map[string]PersisterConfig)
         for k, p := range c.Persisters {
                 switch p.Type {
                 case "FS":
-                        cfg.Persisters[k] = &AppConfig_PersisterFS {
+                        cfg.Persisters[k] = &PersisterConfigFS {
                         Location: p.Location,
                         }
                 case "DB":
                         if p.Named != "" {
                                 db := cfg.Databases[p.Named]
                                 if db != nil {
-                                        cfg.Persisters[k] = &AppConfig_PersisterDB { *db }
+                                        cfg.Persisters[k] = &PersisterConfigDB { *db }
                                 }
                         } else {
-                                cfg.Persisters[k] = &AppConfig_PersisterDB{
-                                        AppConfig_Database {
+                                cfg.Persisters[k] = &PersisterConfigDB{
+                                        DatabaseConfig {
                                         Host: p.Host,
                                         User: p.User,
                                         Password: p.Password,
@@ -154,7 +154,7 @@ func loadAppConfigJSON(fn string) (cfg *AppConfig, err os.Error) {
                         cfg.Database = cfg.Databases[v]
                 }
         case map[string]interface{}:
-                cfg.Database = new(AppConfig_Database)
+                cfg.Database = new(DatabaseConfig)
                 for name, value := range v {
                         switch name {
                         case "host": cfg.Database.Host = value.(string)
@@ -173,12 +173,12 @@ func loadAppConfigJSON(fn string) (cfg *AppConfig, err os.Error) {
         case map[string]interface{}:
                 switch fmt.Sprintf("%v",v["type"]) {
                 case "DB":
-                        var db *AppConfig_Database
+                        var db *DatabaseConfig
                         if v["named"] != nil {
                                 if cfg.Databases == nil { break }
                                 db = cfg.Databases[fmt.Sprintf("%v", v["named"])]
                         } else {
-                                db = &AppConfig_Database{
+                                db = &DatabaseConfig{
                                 Host: v["host"].(string),
                                 User: v["user"].(string),
                                 Password: v["password"].(string),
@@ -186,10 +186,10 @@ func loadAppConfigJSON(fn string) (cfg *AppConfig, err os.Error) {
                                 }
                         }
                         if db != nil {
-                                cfg.Persister = &AppConfig_PersisterDB{ *db }
+                                cfg.Persister = &PersisterConfigDB{ *db }
                         }
                 case "FS":
-                        cfg.Persister = &AppConfig_PersisterFS{
+                        cfg.Persister = &PersisterConfigFS{
                         Location: fmt.Sprintf("%v", v["location"]),
                         }
                 }

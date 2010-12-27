@@ -64,6 +64,7 @@ type Item struct {
         Title string
         PrimaryCategory Category
         GalleryURL string
+        GalleryPlusPictureURL string
         ViewItemURL string
         ProductId string
         PaymentMethod string
@@ -74,7 +75,6 @@ type Item struct {
         SellingStatus SellingStatus
         ListingInfo ListingInfo
         ReturnsAccepted bool
-        GalleryPlusPictureURL string
         Condition Condition
 }
 

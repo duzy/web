@@ -42,7 +42,7 @@ func TestLoadAppConfig(t *testing.T) {
         if fmt.Sprintf("%v",per) != "&{/tmp/web-test/sessions}" {
                 t.Error("per_1 is unexpected:", per)
         }
-        if v, ok := per.(*AppConfig_PersisterFS); ok {
+        if v, ok := per.(*PersisterConfigFS); ok {
                 check(t, v.Location, "/tmp/web-test/sessions")
         } else { t.Error("per_1 is not FS persister:", per) }
 
@@ -51,7 +51,7 @@ func TestLoadAppConfig(t *testing.T) {
         if fmt.Sprintf("%v",per) != "&{{localhost test abc dusell_2}}" {
                 t.Error("per_2 is unexpected:", per)
         }
-        if v, ok := per.(*AppConfig_PersisterDB); ok {
+        if v, ok := per.(*PersisterConfigDB); ok {
                 check(t, v.Host, "localhost")
                 check(t, v.User, "test")
                 check(t, v.Password, "abc")
@@ -63,7 +63,7 @@ func TestLoadAppConfig(t *testing.T) {
         if fmt.Sprintf("%v",per) != "&{{localhost test abc dusell_2}}" {
                 t.Error("per_3 is unexpected:", per)
         }
-        if v, ok := per.(*AppConfig_PersisterDB); ok {
+        if v, ok := per.(*PersisterConfigDB); ok {
                 check(t, v.Host, "localhost")
                 check(t, v.User, "test")
                 check(t, v.Password, "abc")
@@ -75,7 +75,7 @@ func TestLoadAppConfig(t *testing.T) {
 
         check(t, cfg.Database.Database, "dusell")
 
-        if v, ok := cfg.Persister.(*AppConfig_PersisterFS); ok {
+        if v, ok := cfg.Persister.(*PersisterConfigFS); ok {
                 check(t, v.Location, "/tmp/web-test/sessions")
         } else {
                 t.Error("not FS persister:", cfg.Persister)

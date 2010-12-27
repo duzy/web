@@ -212,7 +212,7 @@ func TestNewAppFromConfig(t *testing.T) {
                 t.Error("app from json: model not matched:",a.config.Model)
                 return
         }
-        if v, ok := a.config.Persister.(*AppConfig_PersisterFS); !ok {
+        if v, ok := a.config.Persister.(*PersisterConfigFS); !ok {
                 t.Error("app from json: not FS persister:",v); return
         } else {
                 if v.Location != "/tmp/web-test/sessions" {

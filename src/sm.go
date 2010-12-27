@@ -46,22 +46,22 @@ type DBSessionPersister struct {
         buf *bytes.Buffer
 }
 
-var defaultPersisterConfigFS = &AppConfig_PersisterFS{
+var defaultPersisterConfigFS = &PersisterConfigFS{
         "/tmp/web/sessions/",
 }
 
 // Make a new session Persister.
 // The session id (sid) must be more than 5 chars length.
-func NewSessionPersister(sid string, cfg AppConfig_Persister) (p SessionPersister, err os.Error) {
-        if v, ok := cfg.(*AppConfig_PersisterFS); ok {
+func NewSessionPersister(sid string, cfg PersisterConfig) (p SessionPersister, err os.Error) {
+        if v, ok := cfg.(*PersisterConfigFS); ok {
                 p, err = newFSSessionPersister(sid, v)
-        } else if v, ok := cfg.(*AppConfig_PersisterDB); ok {
+        } else if v, ok := cfg.(*PersisterConfigDB); ok {
                 p, err = newDBSessionPersister(sid, v)
         }
         return
 }
 
-func newFSSessionPersister(sid string, cfg *AppConfig_PersisterFS) (p SessionPersister, err os.Error) {
+func newFSSessionPersister(sid string, cfg *PersisterConfigFS) (p SessionPersister, err os.Error) {
         fs := &FSSessionPersister{}
 
         const dirLen = 5
@@ -94,9 +94,9 @@ finish:
         return
 }
 
-func newDBSessionPersister(sid string, cfg *AppConfig_PersisterDB) (p SessionPersister, err os.Error) {
+func newDBSessionPersister(sid string, cfg *PersisterConfigDB) (p SessionPersister, err os.Error) {
         dbm := GetDBManager()
-        db, err := dbm.GetDatabase(&(cfg.AppConfig_Database))
+        db, err := dbm.GetDatabase(&(cfg.DatabaseConfig))
         if err != nil { /* TODO: error */ goto finish }
 
         sql := SQL_CREATE_SESSION_TABLE
@@ -180,7 +180,7 @@ func NewSession() (s *Session) {
 }
 
 // TODO: make method of SessionPersister, or avoid 'cfg' parameter
-func LoadSession(id string, cfg AppConfig_Persister) (s *Session, err os.Error) {
+func LoadSession(id string, cfg PersisterConfig) (s *Session, err os.Error) {
         p, err := NewSessionPersister(id, cfg)
         if err != nil {
                 fmt.Fprintf(os.Stderr, "error: %s\n", err)
@@ -291,7 +291,7 @@ func (s *Session) Set(k, v string) (prev string) {
         return
 }
 
-func (s *Session) save(cfg AppConfig_Persister) (err os.Error) {
+func (s *Session) save(cfg PersisterConfig) (err os.Error) {
         if s.changed {
                 var p SessionPersister
                 p, err = NewSessionPersister(s.id, cfg)
