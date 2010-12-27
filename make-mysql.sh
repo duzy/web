@@ -4,7 +4,8 @@
     git clone http://github.com/Philio/GoMySQL.git MySQL ||
     {
         echo "Stoped building MySQL."
-    } && exit -1
+        exit -1
+    }
 }
 
 . funs.sh
