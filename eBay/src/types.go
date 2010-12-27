@@ -1,7 +1,5 @@
 package eBay
 
-//import "xml"
-
 type Affiliate struct {
         CustomId string
         NetworkId string

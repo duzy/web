@@ -13,6 +13,11 @@ import (
         "fmt"
 )
 
+type Cacher interface {
+        CacheCategory(category *Category) (err os.Error)
+        CacheItem(item *Item) (err os.Error)
+}
+
 type App struct {
         DEVID string
         AppID string
@@ -21,6 +26,8 @@ type App struct {
         ServiceVersion string
         GlobalID string
         ResponseFormat string
+
+        cache Cacher
 }
 
 type eBayServiceCall interface {
@@ -275,5 +282,12 @@ func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
                         },
                 }
         }//for (items)
+        return
+}
+
+func (eb *App) GetCache() Cacher { return eb.cache }
+func (eb *App) SetCache(cache Cacher) (prev Cacher) {
+        prev = eb.cache
+        eb.cache = cache
         return
 }
