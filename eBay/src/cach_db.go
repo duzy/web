@@ -14,6 +14,7 @@ func _2string(v interface{}) string { return fmt.Sprintf("%v",v) }
 func _2int(v interface{}) int { return v.(int) }
 func _2float(v interface{}) float { return v.(float) }
 func _2bool(v interface{}) bool { return v.(bool) }
+func _bool2int(v bool) (n int) { if v { n = 1 } else { n = 0 }; return }
 
 // NewDBCache accepts parameters in this fixed order:
 //      host, user, password, database
@@ -92,6 +93,7 @@ CREATE TABLE IF NOT EXISTS table_eBay_cache_items(
 `
         SQL_INSERT_CACHE_ITEM_ROW = `
 INSERT INTO table_eBay_cache_items(
+  itemId,
   title,
   primaryCategory,
   galleryURL,
@@ -125,7 +127,7 @@ INSERT INTO table_eBay_cache_items(
   listingInfo_Gift,
   returnsAccepted,
   autoPay
-) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   ON DUPLICATE KEY UPDATE 
     title=VALUES(title),
     primaryCategory=VALUES(primaryCategory),
@@ -250,6 +252,7 @@ func (c *dbCache) CacheCategory(cat *Category) (err os.Error) {
 
 func (c *dbCache) CacheItem(i *Item) (err os.Error) {
         res, err := c.exec(SQL_INSERT_CACHE_ITEM_ROW,
+                i.ItemId,
                 i.Title,
                 i.PrimaryCategory.CategoryId,
                 i.GalleryURL,
@@ -266,8 +269,8 @@ func (c *dbCache) CacheItem(i *Item) (err os.Error) {
                 i.ShippingInfo.ShippingType,
                 i.ShippingInfo.ShipToLocations,
                 i.ShippingInfo.HandlingTime,
-                i.ShippingInfo.ExpeditedShipping,
-                i.ShippingInfo.OneDayShippingAvailable,
+                _bool2int(i.ShippingInfo.ExpeditedShipping),
+                _bool2int(i.ShippingInfo.OneDayShippingAvailable),
                 i.SellingStatus.CurrentPrice.Amount,
                 i.SellingStatus.CurrentPrice.CurrencyId,
                 i.SellingStatus.ConvertedCurrentPrice.Amount,
@@ -278,11 +281,11 @@ func (c *dbCache) CacheItem(i *Item) (err os.Error) {
                 i.ListingInfo.StartTime,
                 i.ListingInfo.EndTime,
                 i.ListingInfo.ListingType,
-                i.ListingInfo.BestOfferEnabled,
-                i.ListingInfo.BuyItNowAvailable,
-                i.ListingInfo.Gift,
-                i.ReturnsAccepted,
-                i.AutoPay )
+                _bool2int(i.ListingInfo.BestOfferEnabled),
+                _bool2int(i.ListingInfo.BuyItNowAvailable),
+                _bool2int(i.ListingInfo.Gift),
+                _bool2int(i.ReturnsAccepted),
+                _bool2int(i.AutoPay) )
         if err != nil { return }
         if res.GetAffectedRows() == 0 /*!= 1*/ {
                 err = os.NewError(fmt.Sprintf("%d rows affected", res.GetAffectedRows()))
