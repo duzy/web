@@ -31,7 +31,7 @@ func TestCacheItem(t *testing.T) {
 
         item := &Item{
         ItemId: "234567",
-        Title: "test-title",
+        Title: fmt.Sprintf("test-title: %v", time.Nanoseconds()),
         PrimaryCategory: Category{
                 CategoryId: "95840",
                 CategoryName: "test-category",
