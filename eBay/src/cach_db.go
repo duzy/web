@@ -227,7 +227,7 @@ func (c *dbCache) exec(sql string, params ...interface{}) (res web.QueryResult, 
 }
 
 func (c *dbCache) get(sql string, params ...interface{}) (row []interface{}, err os.Error) {
-        res, err := c.exec(SQL_SELECT_CACHE_CATEGORY_ROW, params...)
+        res, err := c.exec(sql, params...)
         if err != nil { return }
         if res.GetRowCount() <= 0 {
                 err = os.NewError("not found")
