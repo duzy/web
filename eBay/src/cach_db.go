@@ -10,17 +10,20 @@ type dbCache struct {
         db web.Database
 }
 
+func _2string(v interface{}) string { return fmt.Sprintf("%v",v) }
+func _2int(v interface{}) int { return v.(int) }
+func _2float(v interface{}) float { return v.(float) }
+func _2bool(v interface{}) bool { return v.(bool) }
+
 // NewDBCache accepts parameters in this fixed order:
 //      host, user, password, database
 func NewDBCache(params ...interface{}) (c Cacher, err os.Error) {
         a := []interface{}(params)
-        var host, user, password, database string
-        host, user, password, database = a[0].(string), a[1].(string), a[2].(string), a[3].(string)
         cfg := &web.DatabaseConfig{
-        Host: host,
-        User: user,
-        Password: password,
-        Database: database,
+        Host: a[0].(string),
+        User: a[1].(string),
+        Password: a[2].(string),
+        Database: a[3].(string),
         }
         dbm := web.GetDBManager()
         db, err := dbm.GetDatabase(cfg)
@@ -199,7 +202,10 @@ SELECT
 )
 
 func createCacheTables(db web.Database) (err os.Error) {
-        _, err = db.Query(SQL_CREATE_CACHE_CATEGORY_TABLE)
+        sql := SQL_CREATE_CACHE_CATEGORY_TABLE
+        sql += ";\n"
+        sql += SQL_CREATE_CACHE_ITEM_TABLE
+        _, err = db.Query(sql)
         if err != nil { return }
         return
 }
@@ -289,8 +295,8 @@ func (c *dbCache) GetCategory(id string) (cat *Category, err os.Error) {
         if err != nil { return }
 
         cat = &Category{
-        CategoryId: fmt.Sprintf("%v", row[0]),
-        CategoryName: fmt.Sprintf("%v", row[1]),
+        CategoryId: _2string(row[0]),
+        CategoryName: _2string(row[1]),
         }
         return
 }
@@ -301,56 +307,56 @@ func (c *dbCache) GetItem(id string) (itm *Item, err os.Error) {
 
         itm = &Item{
         ItemId: id,
-        Title: fmt.Sprintf("%v", row[0]),
+        Title: _2string(row[0]),
         PrimaryCategory: Category{
-                CategoryId: fmt.Sprintf("%v", row[1]),
+                CategoryId: _2string(row[1]),
                 CategoryName: "",
                 },
-        GalleryURL: fmt.Sprintf("%v", row[2]),
-        GalleryPlusPictureURL: fmt.Sprintf("%v", row[3]),
-        ViewItemURL: fmt.Sprintf("%v", row[4]),
-        ProductId: fmt.Sprintf("%v", row[5]),
-        PaymentMethod: fmt.Sprintf("%v", row[6]),
-        Location: fmt.Sprintf("%v", row[7]),
-        Country: fmt.Sprintf("%v", row[8]),
+        GalleryURL: _2string(row[2]),
+        GalleryPlusPictureURL: _2string(row[3]),
+        ViewItemURL: _2string(row[4]),
+        ProductId: _2string(row[5]),
+        PaymentMethod: _2string(row[6]),
+        Location: _2string(row[7]),
+        Country: _2string(row[8]),
         Condition: Condition{
-                ConditionId: fmt.Sprintf("%v", row[9]),
-                ConditionDisplayName: fmt.Sprintf("%v", row[10]),
+                ConditionId: _2string(row[9]),
+                ConditionDisplayName: _2string(row[10]),
                 },
         ShippingInfo: ShippingInfo{
                 ShippingServiceCost: Money{
-                        Amount: fmt.Sprintf("%v", row[11]),
-                        CurrencyId: fmt.Sprintf("%v", row[12]),,
+                        Amount: _2float(row[11]),
+                        CurrencyId: _2string(row[12]),
                         },
-                ShippingType: fmt.Sprintf("%v", row[13]),
-                ShipToLocations: fmt.Sprintf("%v", row[14]),
-                HandlingTime: fmt.Sprintf("%v", row[15]),
-                ExpeditedShipping: fmt.Sprintf("%v", row[16]),
-                OneDayShippingAvailable: fmt.Sprintf("%v", row[17]),
+                ShippingType: _2string(row[13]),
+                ShipToLocations: _2string(row[14]),
+                HandlingTime: _2int(row[15]),
+                ExpeditedShipping: _2bool(row[16]),
+                OneDayShippingAvailable: _2bool(row[17]),
                 },
                 SellingStatus: SellingStatus{
                         CurrentPrice: Money{
-                                Amount: fmt.Sprintf("%v", row[18]),
-                                CurrencyId: fmt.Sprintf("%v", row[19]),
+                                Amount: _2float(row[18]),
+                                CurrencyId: _2string(row[19]),
                                 },
                         ConvertedCurrentPrice: Money{
-                                Amount: fmt.Sprintf("%v", row[20]),
-                                CurrencyId: fmt.Sprintf("%v", row[21]),
-                                }
-                        BidCount: fmt.Sprintf("%v", row[22]),
-                        SellingState: fmt.Sprintf("%v", row[23]),
-                        TimeLeft: fmt.Sprintf("%v", row[24]),
+                                Amount: _2float(row[20]),
+                                CurrencyId: _2string(row[21]),
+                                },
+                        BidCount: _2int(row[22]),
+                        SellingState: _2string(row[23]),
+                        TimeLeft: _2string(row[24]),
                         },
                 ListingInfo: ListingInfo{
-                        StartTime: fmt.Sprintf("%v", row[25]),
-                        EndTime: fmt.Sprintf("%v", row[26]),
-                        ListingType: fmt.Sprintf("%v", row[27]),
-                        BestOfferEnabled: fmt.Sprintf("%v", row[28]),
-                        BuyItNowAvailable: fmt.Sprintf("%v", row[29]),
-                        Gift: fmt.Sprintf("%v", row[30]),
+                        StartTime: _2string(row[25]),
+                        EndTime: _2string(row[26]),
+                        ListingType: _2string(row[27]),
+                        BestOfferEnabled: _2bool(row[28]),
+                        BuyItNowAvailable: _2bool(row[29]),
+                        Gift: _2bool(row[30]),
                         },
-                ReturnsAccepted: fmt.Sprintf("%v", row[31]),
-                AutoPay: fmt.Sprintf("%v", row[32]),
+                ReturnsAccepted: _2bool(row[31]),
+                AutoPay: _2bool(row[32]),
         }
         return
 }
