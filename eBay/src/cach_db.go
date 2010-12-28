@@ -305,7 +305,7 @@ func (c *dbCache) GetCategory(id string) (cat *Category, err os.Error) {
 }
 
 func (c *dbCache) GetItem(id string) (itm *Item, err os.Error) {
-        row, err := c.get(SQL_SELECT_CACHE_CATEGORY_ROW, id)
+        row, err := c.get(SQL_SELECT_CACHE_ITEM_ROW, id)
         if err != nil { return }
 
         itm = &Item{
