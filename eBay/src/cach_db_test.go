@@ -11,6 +11,8 @@ func TestCacheCategory(t *testing.T) {
         c, err := NewDBCache("localhost", "test", "abc", "dusell")
         if err != nil { t.Errorf("NewDBCache: %v", err); return }
 
+        defer c.Close()
+
         cat := &Category{
         CategoryId: "123456",
         CategoryName: fmt.Sprintf("test category: %v", time.Nanoseconds()),
@@ -28,6 +30,8 @@ func TestCacheCategory(t *testing.T) {
 func TestCacheItem(t *testing.T) {
         c, err := NewDBCache("localhost", "test", "abc", "dusell")
         if err != nil { t.Errorf("NewDBCache: %v", err); return }
+
+        defer c.Close()
 
         item := &Item{
         ItemId: "234567",

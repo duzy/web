@@ -11,7 +11,8 @@ type Database interface {
         Query(sql string) (res QueryResult, err os.Error)
         MultiQuery(sql string) (res []QueryResult, err os.Error)
         NewStatement() (stmt SQLStatement, err os.Error)
-        // TODO: more: Reconnect, ChangeDatabase, 
+        Reconnect() (err os.Error)
+        ChangeDatabase(db string) (err os.Error)
 }
 
 type QueryResult interface {

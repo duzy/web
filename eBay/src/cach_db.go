@@ -6,38 +6,6 @@ import (
         "os"
 )
 
-type dbCache struct {
-        db web.Database
-}
-
-func _2string(v interface{}) string { return fmt.Sprintf("%v",v) }
-func _2int(v interface{}) int { return v.(int) }
-func _2float(v interface{}) float { return v.(float) }
-func _2bool(v interface{}) bool { return v.(bool) }
-func _bool2int(v bool) (n int) { if v { n = 1 } else { n = 0 }; return }
-
-// NewDBCache accepts parameters in this fixed order:
-//      host, user, password, database
-func NewDBCache(params ...interface{}) (c Cacher, err os.Error) {
-        a := []interface{}(params)
-        cfg := &web.DatabaseConfig{
-        Host: a[0].(string),
-        User: a[1].(string),
-        Password: a[2].(string),
-        Database: a[3].(string),
-        }
-        dbm := web.GetDBManager()
-        db, err := dbm.GetDatabase(cfg)
-        if err == nil {
-                err = createCacheTables(db)
-                if err == nil {
-                        dbc := &dbCache{ db }
-                        c = Cacher(dbc);
-                }
-        }
-        return
-}
-
 const (
         SQL_CREATE_CACHE_CATEGORY_TABLE = `
 CREATE TABLE IF NOT EXISTS table_eBay_cache_categories(
@@ -203,6 +171,38 @@ SELECT
 `
 )
 
+type dbCache struct {
+        db web.Database
+}
+
+func _2string(v interface{}) string { return fmt.Sprintf("%v",v) }
+func _2int(v interface{}) int { return v.(int) }
+func _2float(v interface{}) float { return v.(float) }
+func _2bool(v interface{}) bool { return v.(bool) }
+func _bool2int(v bool) (n int) { if v { n = 1 } else { n = 0 }; return }
+
+// NewDBCache accepts parameters in this fixed order:
+//      host, user, password, database
+func NewDBCache(params ...interface{}) (c Cacher, err os.Error) {
+        a := []interface{}(params)
+        cfg := &web.DatabaseConfig{
+        Host: a[0].(string),
+        User: a[1].(string),
+        Password: a[2].(string),
+        Database: a[3].(string),
+        }
+        dbm := web.GetDBManager()
+        db, err := dbm.GetDatabase(cfg)
+        if err == nil {
+                err = createCacheTables(db)
+                if err == nil {
+                        dbc := &dbCache{ db }
+                        c = Cacher(dbc);
+                }
+        }
+        return
+}
+
 func createCacheTables(db web.Database) (err os.Error) {
         sql := SQL_CREATE_CACHE_CATEGORY_TABLE
         sql += ";\n"
@@ -212,16 +212,20 @@ func createCacheTables(db web.Database) (err os.Error) {
         return
 }
 
+func (c *dbCache) Close() (err os.Error) {
+        err = c.db.Close()
+        return
+}
+
 func (c *dbCache) exec(sql string, params ...interface{}) (res web.QueryResult, err os.Error) {
         stmt, err := c.db.NewStatement()
         if err != nil { return }
 
         defer stmt.Close()
 
-        err = stmt.Prepare(sql)
-        if err != nil { return }
+        if err = stmt.Prepare(sql); err != nil { return }
+        if err = stmt.BindParams(params...); err != nil { return }
 
-        stmt.BindParams(params...)
         res, err = stmt.Execute()
         return
 }

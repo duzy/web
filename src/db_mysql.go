@@ -20,6 +20,7 @@ type mysqlStatement struct {
 
 func NewDatabase() (db Database) {
         p := &mysqlDatabase{ mysql.New() }
+        p.MySQL.Logging = true
         db = Database(p)
         return
 }
@@ -46,6 +47,18 @@ func (db *mysqlDatabase) Ping() (err os.Error) {
 
 func (db *mysqlDatabase) Connect(params ...interface{}) (err os.Error) {
         err = db.MySQL.Connect(params...)
+        if err != nil { err = formatMySQLError(db) }
+        return
+}
+
+func (db *mysqlDatabase) Reconnect() (err os.Error) {
+        err = db.MySQL.Reconnect()
+        if err != nil { err = formatMySQLError(db) }
+        return
+}
+
+func (db *mysqlDatabase) ChangeDatabase(s string) (err os.Error) {
+        err = db.MySQL.ChangeDb(s)
         if err != nil { err = formatMySQLError(db) }
         return
 }

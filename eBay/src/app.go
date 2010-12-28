@@ -14,6 +14,7 @@ import (
 )
 
 type Cacher interface {
+        Close() (err os.Error)
         CacheCategory(cat *Category) (err os.Error)
         CacheItem(itm *Item) (err os.Error)
         GetCategory(id string) (cat *Category, err os.Error)
