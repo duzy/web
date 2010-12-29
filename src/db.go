@@ -4,15 +4,20 @@ import (
         "os"
 )
 
-type Database interface {
+type Database interface { // TODO: -> DatabaseClient or DBClient
         Ping() (err os.Error)
         Connect(params ...interface{}) (err os.Error)
         Close() (err os.Error)
-        Query(sql string) (res QueryResult, err os.Error)
-        MultiQuery(sql string) (res []QueryResult, err os.Error)
-        NewStatement() (stmt SQLStatement, err os.Error)
         Reconnect() (err os.Error)
-        ChangeDatabase(db string) (err os.Error)
+        /*
+         Query(sql string) (res QueryResult, err os.Error)
+         MultiQuery(sql string) (res []QueryResult, err os.Error)
+         NewStatement() (stmt SQLStatement, err os.Error)
+         ChangeDatabase(db string) (err os.Error)
+         */
+        Switch(db string) (err os.Error)
+        Prepare(sql string) (err os.Error)
+        Execute(args ...interface{}) (err os.Error)
 }
 
 type QueryResult interface {
