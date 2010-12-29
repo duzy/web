@@ -2,7 +2,7 @@ package web
 
 import (
         "./_obj/mysql"
-        "fmt"
+        //"fmt"
         "os"
 )
 
@@ -19,85 +19,50 @@ type mysqlStatement struct {
 }
 
 func NewDatabase() (db Database) {
-        p := &mysqlDatabase{ mysql.New() }
-        p.MySQL.Logging = true
+        p := &mysqlDatabase{ nil }
         db = Database(p)
         return
 }
 
-func formatMySQLError(i interface{}) (err os.Error) {
-        switch o := i.(type) {
-        case *mysqlDatabase:
-                if o.Errno != 0 {
-                        err = os.NewError(fmt.Sprintf("[DB:%v] %v",o.Errno,o.Error))
-                }
-        case *mysqlStatement:
-                if o.Errno != 0 {
-                        err = os.NewError(fmt.Sprintf("[STMT:%v] %v",o.Errno,o.Error))
-                }
-        }
-        return
-}
-
-func (db *mysqlDatabase) Ping() (err os.Error) {
-        err = db.MySQL.Ping()
-        if err != nil { err = formatMySQLError(db) }
-        return
-}
-
 func (db *mysqlDatabase) Connect(params ...interface{}) (err os.Error) {
-        err = db.MySQL.Connect(params...)
-        if err != nil { err = formatMySQLError(db) }
-        return
-}
-
-func (db *mysqlDatabase) Reconnect() (err os.Error) {
-        err = db.MySQL.Reconnect()
-        if err != nil { err = formatMySQLError(db) }
-        return
-}
-
-func (db *mysqlDatabase) ChangeDatabase(s string) (err os.Error) {
-        err = db.MySQL.ChangeDb(s)
-        if err != nil { err = formatMySQLError(db) }
+        if len(params) != 4/*6*/ {
+                err = os.NewError("wrong connection parameters");
+                return
+        }
+        var ok bool
+        var netstr, laddrstr, raddrstr, username, password, database string
+        netstr = "unix"
+        raddrstr = "/var/run/mysqld/mysqld.sock"
+        laddrstr, ok = params[0].(string); if !ok { err = os.NewError("not string parameter"); return }
+        username, ok = params[1].(string); if !ok { err = os.NewError("not string parameter"); return }
+        password, ok = params[2].(string); if !ok { err = os.NewError("not string parameter"); return }
+        database, ok = params[3].(string); if !ok { err = os.NewError("not string parameter"); return }
+        db.MySQLInstance, err = mysql.Connect(netstr, laddrstr, raddrstr, username, password, database)
         return
 }
 
 func (db *mysqlDatabase) Close() (err os.Error) {
-        err = db.MySQL.Close()
-        if err != nil { err = formatMySQLError(db) }
+        db.MySQLInstance.Quit()
         return
 }        
 
+func (db *mysqlDatabase) Switch(s string) (err os.Error) {
+        _, err = db.MySQLInstance.Use(s)
+        return
+}
+
 func (db *mysqlDatabase) Query(sql string) (res QueryResult, err os.Error) {
-        r, err := db.MySQL.Query(sql)
+        r, err := db.MySQLInstance.Query(sql)
         if err == nil {
                 res = QueryResult(&mysqlQueryResult{r})
-        } else {
-                err = formatMySQLError(db)
         }
         return
 }
 
-func (db *mysqlDatabase) MultiQuery(sql string) (res []QueryResult, err os.Error) {
-        r, err := db.MySQL.MultiQuery(sql)
-        if err == nil {
-                res = make([]QueryResult, len(r))
-                for i, a := range r {
-                        res[i] = QueryResult(&mysqlQueryResult{a})
-                }
-        } else {
-                err = formatMySQLError(db)
-        }
-        return
-}
-
-func (db *mysqlDatabase) NewStatement() (stmt SQLStatement, err os.Error) {
-        r, err := db.MySQL.InitStmt()
+func (db *mysqlDatabase) Prepare(sql string) (stmt SQLStatement, err os.Error) {
+        r, err := db.MySQLInstance.Prepare(sql)
         if err == nil {
                 stmt = SQLStatement(&mysqlStatement{r})
-        } else {
-                err = formatMySQLError(db)
         }
         return
 }

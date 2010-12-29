@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#which=philio
-which=thoj
+which=philio
+#which=thoj
 
 [[ -d MySQL ]] || {
     #local u=""
@@ -22,7 +22,7 @@ which=thoj
 
 if [[ "x$which" == "xthoj" ]] ; then
 go_tests="
-  MySQL/mysql_test.go
+  mysql_thoj_test.go
 "
 go_files="
   MySQL/mysql.go

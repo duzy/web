@@ -103,14 +103,14 @@ func newDBSessionPersister(sid string, cfg *PersisterConfigDB) (p SessionPersist
         _, err = db.Query(sql)
         if err != nil { /* TODO: error */ goto finish }
 
-        stmt, err := db.NewStatement()
-        if err != nil { /* TODO: error */ goto finish }
+        //stmt, err := db.NewStatement()
+        //if err != nil { /* TODO: error */ goto finish }
 
-        err = stmt.Prepare(SQL_SELECT_SESSION_ROW)
+        stmt, err := db.Prepare(SQL_SELECT_SESSION_ROW)
         if err != nil { /* TODO: error */ stmt.Close(); goto finish }
 
-        stmt.BindParams(sid)
-        res, err := stmt.Execute()
+        //stmt.BindParams(sid)
+        res, err := stmt.Execute(sid)
         if err != nil { /* TODO: error */ stmt.Close(); goto finish }
 
         stmt.Close()
@@ -148,16 +148,11 @@ func (p *DBSessionPersister) Write(b []byte) (n int, err os.Error) {
         return
 }
 func (p *DBSessionPersister) Close() (err os.Error) {
-        stmt, err := p.db.NewStatement()
-        if err == nil {
-                sql := SQL_INSERT_SESSION_ROW
-                err = stmt.Prepare(sql)
-                if err != nil { /* TODO: error */ goto finish }
-                stmt.BindParams(p.sid, p.buf.String())
-                _, err := stmt.Execute()
-                if err != nil { /* TODO: error */ goto finish }
-                stmt.Close()
-        }
+        stmt, err := p.db.Prepare(SQL_INSERT_SESSION_ROW)
+        if err != nil { goto finish }
+        _, err = stmt.Execute(p.sid, p.buf.String())
+        if err != nil { stmt.Close(); goto finish }
+        stmt.Close()
 finish:
         err = p.db.Close()
         return

@@ -39,12 +39,6 @@ func formatMySQLError(i interface{}) (err os.Error) {
         return
 }
 
-func (db *mysqlDatabase) Ping() (err os.Error) {
-        err = db.MySQL.Ping()
-        if err != nil { err = formatMySQLError(db) }
-        return
-}
-
 func (db *mysqlDatabase) Connect(params ...interface{}) (err os.Error) {
         err = db.MySQL.Connect(params...)
         if err != nil { err = formatMySQLError(db) }
@@ -57,17 +51,17 @@ func (db *mysqlDatabase) Reconnect() (err os.Error) {
         return
 }
 
-func (db *mysqlDatabase) ChangeDatabase(s string) (err os.Error) {
-        err = db.MySQL.ChangeDb(s)
-        if err != nil { err = formatMySQLError(db) }
-        return
-}
-
 func (db *mysqlDatabase) Close() (err os.Error) {
         err = db.MySQL.Close()
         if err != nil { err = formatMySQLError(db) }
         return
 }        
+
+func (db *mysqlDatabase) Switch(s string) (err os.Error) {
+        err = db.MySQL.ChangeDb(s)
+        if err != nil { err = formatMySQLError(db) }
+        return
+}
 
 func (db *mysqlDatabase) Query(sql string) (res QueryResult, err os.Error) {
         r, err := db.MySQL.Query(sql)
@@ -79,6 +73,7 @@ func (db *mysqlDatabase) Query(sql string) (res QueryResult, err os.Error) {
         return
 }
 
+/*
 func (db *mysqlDatabase) MultiQuery(sql string) (res []QueryResult, err os.Error) {
         r, err := db.MySQL.MultiQuery(sql)
         if err == nil {
@@ -91,14 +86,15 @@ func (db *mysqlDatabase) MultiQuery(sql string) (res []QueryResult, err os.Error
         }
         return
 }
+ */
 
-func (db *mysqlDatabase) NewStatement() (stmt SQLStatement, err os.Error) {
-        r, err := db.MySQL.InitStmt()
+func (db *mysqlDatabase) Prepare(sql string) (stmt SQLStatement, err os.Error) {
+        s, err := db.MySQL.InitStmt()
+        if err == nil { err = s.Prepare(sql) }
         if err == nil {
-                stmt = SQLStatement(&mysqlStatement{r})
-        } else {
-                err = formatMySQLError(db)
+                stmt = SQLStatement(&mysqlStatement{s})
         }
+        if err != nil { err = formatMySQLError(db) }
         return
 }
 
@@ -115,19 +111,13 @@ func (stmt *mysqlStatement) Prepare(sql string) (err os.Error) {
         return
 }
 
-func (stmt *mysqlStatement) BindParams(params ...interface{}) (err os.Error) {
+func (stmt *mysqlStatement) Execute(params ...interface{}) (res QueryResult, err os.Error) {
         err = stmt.MySQLStatement.BindParams(params...)
-        if err != nil { err = formatMySQLError(stmt) }
-        return
-}
-
-func (stmt *mysqlStatement) Execute() (res QueryResult, err os.Error) {
-        r, err := stmt.MySQLStatement.Execute()
-        if err != nil {
-                err = formatMySQLError(stmt)
-        } else {
-                res = QueryResult(&mysqlQueryResult{r})
+        if err == nil {
+                r, err := stmt.MySQLStatement.Execute()
+                if err == nil { res = QueryResult(&mysqlQueryResult{r}) }
         }
+        if err != nil { err = formatMySQLError(stmt) }
         return
 }
 

@@ -54,11 +54,9 @@ func (v *customViewModel) GetTemplate() string {
 func (v *customViewModel) MakeFields(app *App) (fields interface{}) {
         db, err := app.GetDatabase("dusell")
         if err == nil {
-                err = db.Ping()
-        }
-        if err == nil {
                 v.field1 = "bold"
                 v.field2 = "italic"
+                db.Close() // TODO: do something meaningful with db
         } else {
                 v.field1 = "ERROR"
                 v.field2 = err.String()

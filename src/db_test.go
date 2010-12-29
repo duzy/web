@@ -88,8 +88,8 @@ func TestDatabase(t *testing.T) {
         if err != nil { t.Error(err); goto finish }
         defer db.Close()
 
-        err = db.Ping()
-        if err != nil { t.Error(err); goto finish }
+        //err = db.Ping()
+        //if err != nil { t.Error(err); goto finish }
 
         sql := `SELECT a, b, c FROM table_test LIMIT 10`
         res, err := db.Query(sql)
@@ -111,14 +111,11 @@ func TestDatabase(t *testing.T) {
                 }
         }
 
-        stmt, _ := db.NewStatement()
-
         sql = `SELECT a, b, c FROM table_test WHERE a<? LIMIT 10`
-        err = stmt.Prepare(sql)
+        stmt, err := db.Prepare(sql)
         if err != nil { t.Error(err); goto finish }
 
-        stmt.BindParams(10)
-        res, err = stmt.Execute()
+        res, err = stmt.Execute(10)
         if err != nil { t.Error(err); goto finish }
 
         stmt.Close()
