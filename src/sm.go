@@ -116,7 +116,8 @@ func newDBSessionPersister(sid string, cfg *PersisterConfigDB) (p SessionPersist
         stmt.Close()
 
         props := ""
-        row := res.FetchRow()
+        row, err := res.FetchRow()
+        if err != nil { goto finish }
         if row != nil {
                 props = fmt.Sprintf("%s", row[0])
         } else { /* TODO: error */ }

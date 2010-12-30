@@ -25,7 +25,7 @@ type QueryResult interface {
         GetRowCount() uint64
 
         // Fetch the current row (as an array) and move next
-        FetchRow() []interface{}
+        FetchRow() (row []interface{}, err os.Error)
         MoveFirst()
 }
 

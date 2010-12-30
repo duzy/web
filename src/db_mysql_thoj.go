@@ -31,12 +31,13 @@ func (db *mysqlDatabase) Connect(params ...interface{}) (err os.Error) {
         }
         var ok bool
         var netstr, laddrstr, raddrstr, username, password, database string
-        netstr = "unix"
-        raddrstr = "/var/run/mysqld/mysqld.sock"
         laddrstr, ok = params[0].(string); if !ok { err = os.NewError("not string parameter"); return }
         username, ok = params[1].(string); if !ok { err = os.NewError("not string parameter"); return }
         password, ok = params[2].(string); if !ok { err = os.NewError("not string parameter"); return }
         database, ok = params[3].(string); if !ok { err = os.NewError("not string parameter"); return }
+        raddrstr = "/var/run/mysqld/mysqld.sock"
+        netstr = "unix"
+        laddrstr = ""
         db.MySQLInstance, err = mysql.Connect(netstr, laddrstr, raddrstr, username, password, database)
         return
 }
@@ -67,43 +68,39 @@ func (db *mysqlDatabase) Prepare(sql string) (stmt SQLStatement, err os.Error) {
         return
 }
 
-func (qr *mysqlQueryResult) GetRowCount() uint64 { return qr.MySQLResult.RowCount }
-func (qr *mysqlQueryResult) GetFieldCount() uint64 { return qr.MySQLResult.FieldCount }
-func (qr *mysqlQueryResult) GetFieldName(n int) string { return qr.MySQLResult.Fields[n].Name }
-func (qr *mysqlQueryResult) GetAffectedRows() uint64 { return qr.MySQLResult.AffectedRows }
-func (qr *mysqlQueryResult) GetInsertId() uint64 { return qr.MySQLResult.InsertId }
-func (qr *mysqlQueryResult) MoveFirst() { qr.MySQLResult.Reset() }
-
-func (stmt *mysqlStatement) Prepare(sql string) (err os.Error) {
-        err = stmt.MySQLStatement.Prepare(sql)
-        if err != nil { err = formatMySQLError(stmt) }
-        return
-}
-
-func (stmt *mysqlStatement) BindParams(params ...interface{}) (err os.Error) {
-        err = stmt.MySQLStatement.BindParams(params...)
-        if err != nil { err = formatMySQLError(stmt) }
-        return
-}
-
-func (stmt *mysqlStatement) Execute() (res QueryResult, err os.Error) {
-        r, err := stmt.MySQLStatement.Execute()
-        if err != nil {
-                err = formatMySQLError(stmt)
-        } else {
-                res = QueryResult(&mysqlQueryResult{r})
+func (qr *mysqlQueryResult) GetRowCount() uint64 {
+        if qr.MySQLResponse.ResultSet == nil {
+                return 0
         }
+        l := len(qr.MySQLResponse.ResultSet.Rows)
+        return uint64(l)
+}
+
+func (qr *mysqlQueryResult) GetFieldCount() uint64 { return qr.MySQLResponse.FieldCount }
+func (qr *mysqlQueryResult) GetFieldName(n int) string {
+        return qr.MySQLResponse.ResultSet.Fields[n].Name
+}
+func (qr *mysqlQueryResult) GetAffectedRows() uint64 { return qr.MySQLResponse.AffectedRows }
+func (qr *mysqlQueryResult) GetInsertId() uint64 { return qr.MySQLResponse.InsertId }
+func (qr *mysqlQueryResult) MoveFirst() {
+        // TODO: ...
+}
+func (qr *mysqlQueryResult) FetchRow() (row []interface{}, err os.Error) {
+        r, err := qr.MySQLResponse.FetchRow()
+        if err != nil { return }
+        // TODO: ...
         return
 }
 
-func (stmt *mysqlStatement) Reset() (err os.Error) {
-        err = stmt.MySQLStatement.Reset()
-        if err != nil { err = formatMySQLError(stmt) }
+func (stmt *mysqlStatement) Execute(params ...interface{}) (res QueryResult, err os.Error) {
+        r, err := stmt.MySQLStatement.Execute(params...)
+        if err != nil { return }
+
+        res = QueryResult(&mysqlQueryResult{r})
         return
 }
 
 func (stmt *mysqlStatement) Close() (err os.Error) {
-        err = stmt.MySQLStatement.Close()
-        if err != nil { err = formatMySQLError(stmt) }
+        //err = stmt.MySQLStatement.Close()
         return
 }

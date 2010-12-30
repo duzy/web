@@ -1,7 +1,7 @@
 #!/bin/bash
 
-which=philio
-#which=thoj
+#which=philio
+which=thoj
 
 [[ -d MySQL ]] || {
     #local u=""

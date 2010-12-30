@@ -14,7 +14,8 @@ else
     s=philio
 fi
 
-go_tests=`ls src/*_test.go`
+#go_tests=`ls src/*_test.go`
+go_tests="src/db_test.go"
 go_files="
   src/app.go
   src/view.go

@@ -2,9 +2,11 @@ package web
 
 import (
         "testing"
-        "./_obj/mysql"
+        //"./_obj/mysql"
+        "fmt"
 )
 
+/*
 func Test_mysql(t *testing.T) {
         db := mysql.New()
         db.Logging = false
@@ -81,23 +83,27 @@ SELECT a, b, c FROM table_test LIMIT 10
 
 finish:
 }
+ */
 
 func TestDatabase(t *testing.T) {
         db := NewDatabase()
+        fmt.Print("connect...\n");
         err := db.Connect("localhost", "test", "abc", "dusell")
         if err != nil { t.Error(err); goto finish }
         defer db.Close()
 
-        //err = db.Ping()
-        //if err != nil { t.Error(err); goto finish }
-
         sql := `SELECT a, b, c FROM table_test LIMIT 10`
+        fmt.Print("Query...\n");
         res, err := db.Query(sql)
         if err != nil { t.Error(err); goto finish }
 
         for {
-                row := res.FetchRow();
-                if row == nil { break }
+                fmt.Print("fetch...\n");
+                row, err := res.FetchRow();
+                if err != nil || row == nil {
+                        t.Error("FetchRow: failed");
+                        goto finish
+                }
                 for k, v := range row {
                         switch res.GetFieldName(k) {
                         case "a":
@@ -112,17 +118,23 @@ func TestDatabase(t *testing.T) {
         }
 
         sql = `SELECT a, b, c FROM table_test WHERE a<? LIMIT 10`
+        fmt.Printf("prepare...\n");
         stmt, err := db.Prepare(sql)
         if err != nil { t.Error(err); goto finish }
 
+        fmt.Printf("execute...\n");
         res, err = stmt.Execute(10)
         if err != nil { t.Error(err); goto finish }
 
         stmt.Close()
 
         for {
-                row := res.FetchRow();
-                if row == nil { break }
+                fmt.Printf("2fetch...\n")
+                row, err := res.FetchRow();
+                if err != nil || row == nil {
+                        t.Error("FetchRow: failed");
+                        goto finish
+                }
                 for k, v := range row {
                         switch res.GetFieldName(k) {
                         case "a":
