@@ -100,10 +100,8 @@ func TestDatabase(t *testing.T) {
         for {
                 fmt.Print("fetch...\n");
                 row, err := res.FetchRow();
-                if err != nil || row == nil {
-                        t.Error("FetchRow: failed");
-                        goto finish
-                }
+                if err != nil { t.Error("FetchRow: failed"); goto finish }
+                if row == nil { break }
                 for k, v := range row {
                         switch res.GetFieldName(k) {
                         case "a":
@@ -131,10 +129,8 @@ func TestDatabase(t *testing.T) {
         for {
                 fmt.Printf("2fetch...\n")
                 row, err := res.FetchRow();
-                if err != nil || row == nil {
-                        t.Error("FetchRow: failed");
-                        goto finish
-                }
+                if err != nil { t.Error("FetchRow: failed"); goto finish }
+                if row == nil { break }
                 for k, v := range row {
                         switch res.GetFieldName(k) {
                         case "a":

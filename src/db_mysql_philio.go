@@ -104,6 +104,11 @@ func (qr *mysqlQueryResult) GetFieldName(n int) string { return qr.MySQLResult.F
 func (qr *mysqlQueryResult) GetAffectedRows() uint64 { return qr.MySQLResult.AffectedRows }
 func (qr *mysqlQueryResult) GetInsertId() uint64 { return qr.MySQLResult.InsertId }
 func (qr *mysqlQueryResult) MoveFirst() { qr.MySQLResult.Reset() }
+func (qr *mysqlQueryResult) FetchRow() (row []interface{}, err os.Error) {
+        row = qr.MySQLResult.FetchRow()
+        //if row == nil { err = os.NewError("no row fetched") }
+        return
+}
 
 func (stmt *mysqlStatement) Prepare(sql string) (err os.Error) {
         err = stmt.MySQLStatement.Prepare(sql)
