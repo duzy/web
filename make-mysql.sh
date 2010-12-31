@@ -32,6 +32,9 @@ go_files="
   MySQL/mysql_util.go
 "
 else
+go_tests="
+  mysql_philio_test.go
+"
 go_files="
   MySQL/mysql.go
   MySQL/mysql_const.go
