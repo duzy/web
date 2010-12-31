@@ -218,15 +218,12 @@ func (c *dbCache) Close() (err os.Error) {
 }
 
 func (c *dbCache) exec(sql string, params ...interface{}) (res web.QueryResult, err os.Error) {
-        stmt, err := c.db.NewStatement()
-        if err != nil { return }
+        var stmt web.SQLStatement
+        if stmt, err = c.db.Prepare(sql); err != nil { return }
 
         defer stmt.Close()
 
-        if err = stmt.Prepare(sql); err != nil { return }
-        if err = stmt.BindParams(params...); err != nil { return }
-
-        res, err = stmt.Execute()
+        if res, err = stmt.Execute(params...); err != nil { return }
         return
 }
 
@@ -238,8 +235,9 @@ func (c *dbCache) get(sql string, params ...interface{}) (row []interface{}, err
                 return
         }
 
-        row = res.FetchRow()
-        if row == nil { err = os.NewError("fatal: FetchRow") }
+        row, err = res.FetchRow()
+        if err != nil { return }
+        //if row == nil { err = os.NewError("fatal: FetchRow") }
         return
 }
 

@@ -206,6 +206,7 @@ func (eb *App) parseJSONResponse(str string) (res *findItemsResponse, err os.Err
                 return
         }
 
+        fmt.Printf("%v\n",str);
         err = json.Unmarshal([]byte(str), v)
         if err == nil { res = noJSON(ra[0]) }
         return

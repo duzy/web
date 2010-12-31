@@ -55,7 +55,7 @@ func (db *mysqlDatabase) Close() (err os.Error) {
         err = db.MySQL.Close()
         if err != nil { err = formatMySQLError(db) }
         return
-}        
+}
 
 func (db *mysqlDatabase) Switch(s string) (err os.Error) {
         err = db.MySQL.ChangeDb(s)
