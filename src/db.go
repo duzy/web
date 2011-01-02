@@ -7,9 +7,11 @@ import (
 type Database interface {
         Connect(params ...interface{}) (err os.Error)
         Close() (err os.Error)
+        Reconnect() (err os.Error)
         Query(sql string) (res QueryResult, err os.Error)
         Switch(db string) (err os.Error)
         Prepare(sql string) (stmt SQLStatement, err os.Error)
+        Escape(s string) string
 }
 
 type SQLStatement interface {

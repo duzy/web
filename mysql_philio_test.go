@@ -6,6 +6,7 @@ package mysql
 
 import (
         "testing"
+        "strings"
         "fmt"
 )
 
@@ -295,6 +296,11 @@ LIMIT 1
         }
          */
 
+        q := strings.Replace(sql, "?", `"field 0"`, 1)
+        res, err := db.Query(q)
+        if err != nil { t.Errorf("Query: [%d] %s", stmt.Errno, stmt.Error); return }
+        fmt.Printf("%v\n", res)
+
         stmt, err = db.InitStmt()
         if err != nil { t.Errorf("InitStmt: [%d] %s", stmt.Errno, stmt.Error); return }
 
@@ -307,8 +313,8 @@ LIMIT 1
                 return
         }
 
-        fmt.Printf("====\n");
-        db.Logging = true
+        //fmt.Printf("====\n");
+        //db.Logging = true
         if res, err := stmt.Execute(); err != nil {
                 stmt.Close()
                 t.Errorf("Execute: [%d] %s", stmt.Errno, stmt.Error);
@@ -316,7 +322,8 @@ LIMIT 1
         } else {
                 fmt.Printf("%v\n", res)
         }
-        fmt.Printf("====.\n");
+        //db.Logging = false
+        //fmt.Printf("====.\n");
 
         if err = stmt.Close(); err != nil {
                 t.Errorf("Close: [%d] %s", stmt.Errno, stmt.Error);

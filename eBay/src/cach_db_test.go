@@ -4,7 +4,7 @@ import (
         "testing"
         "time"
         "fmt"
-        //"reflect"
+        "reflect"
 )
 
 func TestCacheCategory(t *testing.T) {
@@ -92,11 +92,11 @@ func TestCacheItem(t *testing.T) {
 
         item2, err := c.GetItem(item.ItemId)
         if err != nil { t.Errorf("c.GetItem(%s): %v", item.ItemId, err); return }
-        /*
+        if item.ItemId != item2.ItemId { t.Errorf("c.GetItem: not equal: %v != %v", item, item2); return }
         if !reflect.DeepEqual(item, item2) {
-                t.Errorf("c.GetItem: not equal: %v != %v", item, item2)
+                t.Error("c.GetItem: not equal")
+                t.Errorf("c.GetItem: %v", item)
+                t.Errorf("c.GetItem: %v", item2)
                 return
         }
-         */
-        if item.ItemId != item2.ItemId { t.Errorf("c.GetItem: not equal: %v != %v", item, item2); return }
 }

@@ -20,7 +20,7 @@ type mysqlStatement struct {
 
 func NewDatabase() (db Database) {
         p := &mysqlDatabase{ mysql.New() }
-        p.MySQL.Logging = true
+        //p.MySQL.Logging = true
         db = Database(p)
         return
 }
@@ -90,13 +90,16 @@ func (db *mysqlDatabase) MultiQuery(sql string) (res []QueryResult, err os.Error
 
 func (db *mysqlDatabase) Prepare(sql string) (stmt SQLStatement, err os.Error) {
         s, err := db.MySQL.InitStmt()
-        if err == nil { err = s.Prepare(sql) }
         if err == nil {
-                stmt = SQLStatement(&mysqlStatement{s})
+                if err = s.Prepare(sql); err == nil {
+                        stmt = SQLStatement(&mysqlStatement{s})
+                }
         }
         if err != nil { err = formatMySQLError(db) }
         return
 }
+
+func (db *mysqlDatabase) Escape(s string) string { return db.MySQL.Escape(s) }
 
 func (qr *mysqlQueryResult) GetRowCount() uint64 { return qr.MySQLResult.RowCount }
 func (qr *mysqlQueryResult) GetFieldCount() uint64 { return qr.MySQLResult.FieldCount }
