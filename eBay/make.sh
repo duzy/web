@@ -21,7 +21,7 @@ go_files="
   src/app.go
   src/cach_db.go
   src/types.go
-  src/findsvc.go
+  src/finding.go
   src/shopping.go
   src/trading.go
 "
