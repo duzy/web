@@ -16,10 +16,10 @@ func TestAPIGetVersion(t *testing.T) {
         if err != nil { t.Error(err); return }
 
         n := strings.Index(s, "<version>")
-        if n == -1 { t.Errorf("no tag <version>: %v", s); return }
+        if n == -1 { t.Errorf("no tag <version>"); return }
 
         n = strings.Index(s, "</version>")
-        if n == -1 { t.Errorf("no tag </version>: %v", s); return }
+        if n == -1 { t.Errorf("no tag </version>"); return }
 }
 
 func TestAPIFindItemsByKeywords(t *testing.T) {
@@ -35,7 +35,7 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
                 //fmt.Printf("%s\n", s)
 
                 n := strings.Index(s, "<findItemsByKeywordsResponse ")
-                if n == -1 { t.Errorf("no tag <findItemsByKeywordsResponse>: %s\n", s); goto finish }
+                if n == -1 { t.Errorf("no tag <findItemsByKeywordsResponse>\n"); goto finish }
 
                 s = s[n+30:len(s)]
                 n = strings.Index(s, "<item>")
@@ -191,7 +191,7 @@ func TestXMLUnmarshalFindItemsResponse(t *testing.T) {
         if v.PaginationOutput.TotalEntries != 4730 { t.Error("nojson: paginationOutput.totalEntries:",v.PaginationOutput.TotalEntries); return }
 }
 
-func TestAppParseResponse(t *testing.T) {
+func TestFindingServiceParseResponse(t *testing.T) {
         a := NewApp(false)
         svc := a.NewFindingService()
         xml, err := svc.FindItemsByKeywords("Nokia N8", 3)

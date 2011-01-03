@@ -13,8 +13,8 @@ fi
 
 . ../funs.sh
 
+#go_tests=`ls src/[acstu]*_test.go`
 go_tests=`ls src/*_test.go`
-#go_tests=`ls src/trading_test.go src/util_test.go`
 go_files="
   src/urls.go
   src/util.go

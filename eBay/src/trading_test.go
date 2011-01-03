@@ -15,6 +15,7 @@ func TestTradingCallGetCategories(t *testing.T) {
         c.CategoryParent = "20081"
         c.LevelLimit = 1
         c.ViewAllNodes = true
+        c.DetailLevel = ReturnAll
 
         xml, err := a.Invoke(c)
         if err != nil { t.Errorf("%v\n", err); return }

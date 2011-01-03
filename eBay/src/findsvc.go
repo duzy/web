@@ -270,7 +270,7 @@ func (svc *FindingService) parseXMLResponse(str string) (res *findItemsResponse,
         }
 
         if v == nil {
-                err = os.NewError(fmt.Sprintf("don't know how to parse '%s'",start.Name))
+                err = os.NewError(fmt.Sprintf("bad response: %s",start.Name.Local))
                 return
         }
 
