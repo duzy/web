@@ -36,7 +36,7 @@ type eBayFindingService_GetHistograms struct {
 
 type eBayFindingService_GetSearchKeywordsRecommendation struct {
         eBayFindingServiceCall
-        keywords string
+        Keywords string
 }
 
 type eBayFindingService_FindItemsByCategory struct {
@@ -53,7 +53,7 @@ type eBayFindingService_FindItemsIneBayStores struct {
 
 type eBayFindingService_FindItemsByKeywords struct {
         eBayFindingServiceCall
-        keywords string
+        Keywords string
 }
 
 type eBayFindingService_FindItemsAdvanced struct {
@@ -169,7 +169,6 @@ func (call *eBayFindingService_GetSearchKeywordsRecommendation) GetHeaders(app *
 func (call *eBayFindingService_FindItemsByKeywords)             GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
 func (call *eBayFindingService_FindItemsAdvanced)               GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
 
-// http://developer.ebay.com/DevZone/finding/CallRef/getVersion.html
 func (call *eBayFindingService_GetVersion)                      GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
 func (call *eBayFindingService_GetHistograms)                   GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
 func (call *eBayFindingService_GetSearchKeywordsRecommendation) GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }

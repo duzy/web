@@ -30,7 +30,7 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
 
                 svc := eb.NewFindingService()
                 call := svc.NewFindItemsByKeywordsCall()//("iPhone", 3)
-                call.keywords = "iPhone"
+                call.Keywords = "iPhone"
                 call.PaginationInput.EntriesPerPage = 3
                 s, err := eb.Invoke(call)
                 if err != nil { t.Error(err); goto finish }
@@ -58,7 +58,7 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
 
                 svc := eb.NewFindingService()
                 call := svc.NewFindItemsByKeywordsCall()//("Nokia N9", 3)
-                call.keywords = "Nokia N9"
+                call.Keywords = "Nokia N9"
                 call.PaginationInput.EntriesPerPage = 3
                 s, err := eb.Invoke(call)
                 if err != nil { t.Error(err); goto finish }
@@ -200,7 +200,7 @@ func TestFindingServiceParseResponse(t *testing.T) {
         a := NewApp(false)
         svc := a.NewFindingService()
         call := svc.NewFindItemsByKeywordsCall()//("Nokia N8", 3)
-        call.keywords = "Nokia N8"
+        call.Keywords = "Nokia N8"
         call.PaginationInput.EntriesPerPage = 3
         xml, err := a.Invoke(call)
         if err != nil { t.Error(err); return }
@@ -220,7 +220,7 @@ func TestFindingServiceParseResponse(t *testing.T) {
 
         // test JSON response
         call = svc.NewFindItemsByKeywordsCall()//("Nokia N8", 3)
-        call.keywords = "Nokia N8"
+        call.Keywords = "Nokia N8"
         call.PaginationInput.EntriesPerPage = 3
         json, err := a.Invoke(call)
         if err != nil { t.Error(err); return }
