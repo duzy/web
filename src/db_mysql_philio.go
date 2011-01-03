@@ -29,11 +29,11 @@ func formatMySQLError(i interface{}) (err os.Error) {
         switch o := i.(type) {
         case *mysqlDatabase:
                 if o.Errno != 0 {
-                        err = os.NewError(fmt.Sprintf("[DB:%v] %v",o.Errno,o.Error))
+                        err = os.NewError(fmt.Sprintf("[DB][%v] %v",o.Errno,o.Error))
                 }
         case *mysqlStatement:
                 if o.Errno != 0 {
-                        err = os.NewError(fmt.Sprintf("[STMT:%v] %v",o.Errno,o.Error))
+                        err = os.NewError(fmt.Sprintf("[STMT][%v] %v",o.Errno,o.Error))
                 }
         }
         return

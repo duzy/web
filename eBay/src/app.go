@@ -5,12 +5,12 @@ import (
         "io"
         "io/ioutil"
         "http"
-        "bytes"
-        "xml"
-        "json"
-        "strconv"
+        "bufio"
         "strings"
         "fmt"
+        "net"
+        "crypto/tls"
+        "encoding/base64"
 )
 
 type Cacher interface {
@@ -25,6 +25,7 @@ type App struct {
         DEVID string
         AppID string
         CertID string
+        UserToken string
 
         ServiceVersion string
         GlobalID string
@@ -34,33 +35,38 @@ type App struct {
 }
 
 type eBayServiceCall interface {
+        GetHeaders(app *App) map[string]string
         GetURL(app *App) string
-        GetMessage(app *App) io.Reader
+        GetMessage(app *App) (io.Reader, int)
 }
 
-func NewApp() (eb *App) {
-        eb = &App {
-                // Sandbox Key Set
-                /*
-        DEVID: "c5f14b63-0bf9-405f-8c5c-efaaba2b4a02",
-        AppID: "dusellco-da1b-434b-9d10-2448ee5fc58a",
-        CertID: "4d6382a0-aad7-4b93-92d1-4f558471c576",
-                 */
-
-                // Production Key Set
-        DEVID: "c5f14b63-0bf9-405f-8c5c-efaaba2b4a02",
-        AppID: "dusellco-2abe-4ae8-8bc6-5fd8dc98b37e",
-        CertID: "87aab9ab-375c-41e5-bf14-9702fec7dec3",
-
-        GlobalID: "EBAY-US",
-        ServiceVersion: "1.8.0",
-        ResponseFormat: "XML",
+func NewApp(sandbox bool) (app *App) {
+        if sandbox {
+                app = &App {
+                DEVID: "c5f14b63-0bf9-405f-8c5c-efaaba2b4a02",
+                AppID: "dusellco-da1b-434b-9d10-2448ee5fc58a",
+                CertID: "4d6382a0-aad7-4b93-92d1-4f558471c576",
+                UserToken: `AgAAAA**AQAAAA**aAAAAA**hXIgTQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4CoAZCCpA2dj6x9nY+seQ**xnMBAA**AAMAAA**s7Ft71dh0bgNFPn/VC3cGVUGv7B162v7Dq1lzTamuW/qLuycuUz4A4Io82+wv4ESB3DHXqywAirzNZ23cbWSzGccPnKe9yei6S433LhOpWHKimqztXvPnPFFQfiI6fJa/+Wfd4RAKjkGu0ymbi0tJ4WF1Xd50Iz9ZJxtHUNgkHM6qjnUe/q9SkY+cVoL25jFX6lyBzTUTklsKd/ASBLsFqItuUL45v7kpLAba/MqcNe35PFIGQ61nNKs+nAUNrE7mMizmAd0eXCsIhdtcC75fERplsvZGNxD+GudZMJjagWoUhIcD49yDvOVl9AmRqi72NjDiCTXqk8B2Hv/I/FMe4Ig5vVjRduzxR4AlwyxyP/ZhEqX951GEML2mCJiaGyNz+vlJYkFeccrxYE8QymmJ+iSABDZx8Qmcz8s7LFn++YBFoGjtLpMgOyzH/JSlbefpzh8JaaDFoE0P2u17e6/wEjfU9bjibBY5Evb2qFCEKjBorTB6U+fsf4ST8WZCWItHXbJjgyNsI3DmuOXkYTpKGj+HsnlKDuJmMPtmOrgkVXaBysH30u7WHyDYtAQNBE4s9Nr8DLhPemWK78y52layS2xzc/qFRtJnsWQ5AZeRNgJXx9M4PQZD36VqNFCMozHBKQB6HMNL/hx/DlkDs2likpYbr0ksSjBkCpnkfJCDCR9tVAityqW27sz4ukYkKKXGYynlqiuS0Ds6hnIwUQy2H2uwSnEz8oADfKfZzq07HKOyvV9CyhL8jHZFQ1Uwcl5`,
+                GlobalID: "EBAY-US",
+                ServiceVersion: "1.8.0",
+                ResponseFormat: "XML",
+                }
+        } else {
+                app = &App {
+                DEVID: "c5f14b63-0bf9-405f-8c5c-efaaba2b4a02",
+                AppID: "dusellco-2abe-4ae8-8bc6-5fd8dc98b37e",
+                CertID: "87aab9ab-375c-41e5-bf14-9702fec7dec3",
+                UserToken: ``,
+                GlobalID: "EBAY-US",
+                ServiceVersion: "1.8.0",
+                ResponseFormat: "XML",
+                }
         }
         return
 }
 
-func (eb *App) get(call eBayServiceCall) (str string, err os.Error) {
-        u := call.GetURL(eb)
+func (app *App) get(call eBayServiceCall) (str string, err os.Error) {
+        u := call.GetURL(app)
         r, _, err := http.Get(u)
         if err == nil {
                 var b []byte
@@ -71,10 +77,11 @@ func (eb *App) get(call eBayServiceCall) (str string, err os.Error) {
         return
 }
 
-func (eb *App) post(call eBayServiceCall) (str string, err os.Error) {
+func (app *App) post_(call eBayServiceCall) (str string, err os.Error) {
         t := "text/xml" // TODO: text/json
-        u := call.GetURL(eb)
-        r, err := http.Post(u, t, call.GetMessage(eb))
+        u := call.GetURL(app)
+        msg, _ := call.GetMessage(app)
+        r, err := http.Post(u, t, msg)
         if err == nil {
                 var b []byte
                 b, err = ioutil.ReadAll(r.Body)
@@ -84,213 +91,94 @@ func (eb *App) post(call eBayServiceCall) (str string, err os.Error) {
         return
 }
 
-// NewFindingService returns a new eBay.FindingService.
-func (eb *App) NewFindingService() (p *FindingService) {
-        p = &FindingService{ eb }
-        return
-}
+func hasPort(s string) bool { return strings.LastIndex(s, ":") > strings.LastIndex(s, "]") }
 
-// ParseResponse parse text response of an eBay operation.
-func (eb *App) ParseResponse(str string) (res *findItemsResponse, err os.Error) {
-        switch eb.ResponseFormat {
-        case "JSON":
-                res, err = eb.parseJSONResponse(str)
-        case "XML":
-                res, err = eb.parseXMLResponse(str)
-        default:
-                err = os.NewError("unknown data format '"+eb.ResponseFormat+"'")
+type nopCloser struct { io.Reader }
+func (nopCloser) Close() os.Error { return nil }
+
+func (app *App) post(call eBayServiceCall) (str string, err os.Error) {
+        msg, ml := call.GetMessage(app)
+
+        var req http.Request
+        req.Method = "POST"
+        req.ProtoMajor = 1
+        req.ProtoMinor = 1
+        req.Close = true
+        req.Body = nopCloser{ msg }
+        req.Header = call.GetHeaders(app)
+        if req.Header == nil { req.Header = make(map[string]string) }
+        req.Header["Content-Type"] = "text/xml" // TODO: text/json
+        req.Header["Content-Length"] = fmt.Sprintf("%d", ml)
+        req.ContentLength = int64(ml)
+        //req.TransferEncoding = []string{"chunked"}
+        req.URL, err = http.ParseURL(call.GetURL(app))
+        if err != nil { return }
+
+        if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
+                err = os.NewError("unsupported protocol scheme: "+req.URL.Scheme)
+                return
         }
-        return
-}
 
-// parseXMLResponse parse XML format response
-func (eb *App) parseXMLResponse(str string) (res *findItemsResponse, err os.Error) {
-        p := xml.NewParser(bytes.NewBufferString(str))
+        addr := req.URL.Host
+        if !hasPort(addr) { addr += ":" + req.URL.Scheme }
 
-        var start *xml.StartElement
-        for {
-                tok, err := p.Token()
+        info := req.URL.RawUserinfo
+        if 0 < len(info) {
+                enc := base64.URLEncoding
+                encoded := make([]byte, enc.EncodedLen(len(info)))
+                enc.Encode(encoded, []byte(info))
+                req.Header["Authorization"] = "Basic " + string(encoded)
+        }
+
+        var conn io.ReadWriteCloser
+        if req.URL.Scheme == "http" {
+                conn, err = net.Dial("tcp", "", addr)
                 if err != nil { return }
-                if t, ok := tok.(xml.StartElement); ok {
-                        start = &t
-                        break;
+        } else { // https
+                conn, err = tls.Dial("tcp", "", addr, nil)
+                if err != nil { return }
+
+                h := req.URL.Host
+                if hasPort(h) {
+                        h = h[0:strings.LastIndex(h, ":")]
+                }
+                if err = conn.(*tls.Conn).VerifyHostname(h); err != nil {
+                        return
                 }
         }
 
-        if start == nil {
-                err = os.NewError("no xml.StartElement found")
-                return
-        }
+        if err = req.Write(conn); err != nil { conn.Close(); return }
 
-        res = new(findItemsResponse)
+        reader := bufio.NewReader(conn)
+        resp, err := http.ReadResponse(reader, req.Method)
+        if err != nil { conn.Close(); return }
 
-        var v interface{}
-        switch start.Name.Local {
-        case "findItemsByCategoryResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsByCategoryResponse"
-                        *findItemsResponse
-                }{ xml.Name{}, res, }
-        case "findItemsByProductResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsByProductResponse"
-                        *findItemsResponse
-                }{ xml.Name{}, res, }
-        case "findItemsIneBayStoresResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsIneBayStoresResponse"
-                        *findItemsResponse
-                }{ xml.Name{}, res, }
-        case "findItemsByKeywordsResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsByKeywordsResponse"
-                        *findItemsResponse
-                }{ xml.Name{}, res, }
-        case "findItemsAdvancedResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsAdvancedResponse"
-                        *findItemsResponse
-                }{ xml.Name{}, res, }
-                // TODO: more response
-        }
+        var buf []byte
+        buf, err = ioutil.ReadAll(resp.Body)
+        conn.Close()
 
-        if v == nil {
-                err = os.NewError(fmt.Sprintf("don't know how to parse '%s'",start.Name))
-                return
-        }
-
-        err = p.Unmarshal(v, start)
+        str = string(buf)
         return
 }
 
-func getJSONResponseType(str string) (typ string) {
-        n := strings.Index(str, `"` /*`{"`*/)
-        if n == -1 { return }
-
-        str = str[n+1 /*2*/:]
-        n = strings.Index(str, `":`)
-        if n == -1 { return }
-
-        typ = str[0:n]
+// NewFindingService returns a new eBay.FindingService.
+func (app *App) NewFindingService() (p *FindingService) {
+        p = &FindingService{ app }
         return
 }
 
-// parseJSONResponse parse JSON format response
-func (eb *App) parseJSONResponse(str string) (res *findItemsResponse, err os.Error) {
-        ra := make([]*findItemsJSONResponse, 1)
-
-        var v interface{}
-        switch t := getJSONResponseType(str[0:]); t {
-        case "findItemsByCategoryResponse":
-                v = &struct {
-                        V []*findItemsJSONResponse "findItemsByCategoryResponse"
-                }{ ra }
-        case "findItemsByProductResponse":
-                v = &struct {
-                        V []*findItemsJSONResponse "findItemsByProductResponse"
-                }{ ra }
-        case "findItemsIneBayStoresResponse":
-                v = &struct {
-                        V []*findItemsJSONResponse "findItemsIneBayStoresResponse"
-                }{ ra }
-        case "findItemsByKeywordsResponse":
-                v = &struct {
-                        V []*findItemsJSONResponse "findItemsByKeywordsResponse"
-                }{ ra }
-        case "findItemsAdvancedResponse":
-                v = &struct {
-                        V []*findItemsJSONResponse "findItemsAdvancedResponse"
-                }{ ra }
-        default:
-                err = os.NewError("unknown JSON response: '"+t+"'")
-                return
-        }
-
-        err = json.Unmarshal([]byte(str), v)
-        if err == nil { res = noJSON(ra[0]) }
+func (app *App) NewTradingService() (p *TradingService) {
+        p = &TradingService{ app }
         return
 }
 
-func stoi(s string) (i int) { i, _ = strconv.Atoi(s); return }
-func stof(s string) (f float) { f, _ = strconv.Atof(s); return }
-func stob(s string) (b bool) { b, _ = strconv.Atob(s); return }
-func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
-        res = &findItemsResponse{
-        Ack: r.Ack[0],
-        Version: r.Version[0],
-        Timestamp: r.Timestamp[0],
-        //SearchResult: { make([]Item, len(r.SearchResult[0].Item)) },
-        ItemSearchURL: r.ItemSearchURL[0],
-        PaginationOutput: PaginationOutput{
-                PageNumber: stoi(r.PaginationOutput[0].PageNumber[0]),
-                EntriesPerPage: stoi(r.PaginationOutput[0].EntriesPerPage[0]),
-                TotalPages: stoi(r.PaginationOutput[0].TotalPages[0]),
-                TotalEntries: stoi(r.PaginationOutput[0].TotalEntries[0]),
-                },
-        }
-
-        res.SearchResult.Item = make([]Item, len(r.SearchResult[0].Item))
-        
-        for n, i := range r.SearchResult[0].Item {
-                res.SearchResult.Item[n] = Item{
-                ItemId: i.ItemId[0],
-                Title: i.Title[0],
-                //GlobalId: i.GlobalId[0],
-                PrimaryCategory: Category{
-                        CategoryId: i.PrimaryCategory[0].CategoryId[0],
-                        CategoryName: i.PrimaryCategory[0].CategoryName[0],
-                        },
-                GalleryURL: i.GalleryURL[0],
-                ViewItemURL: i.ViewItemURL[0],
-                PaymentMethod: i.PaymentMethod[0],
-                AutoPay: stob(i.AutoPay[0]),
-                Location: i.Location[0],
-                Country: i.Country[0],
-                ShippingInfo: ShippingInfo{
-                        ShippingServiceCost: Money{
-                                        i.ShippingInfo[0].ShippingServiceCost[0].CurrencyId,
-                                        stof(i.ShippingInfo[0].ShippingServiceCost[0].Amount),
-                                },
-                        ShippingType: i.ShippingInfo[0].ShippingType[0],
-                        ShipToLocations: strings.Join(i.ShippingInfo[0].ShipToLocations,","),
-                        ExpeditedShipping: stob(i.ShippingInfo[0].ExpeditedShipping[0]),
-                        OneDayShippingAvailable: stob(i.ShippingInfo[0].OneDayShippingAvailable[0]),
-                        HandlingTime: stoi(i.ShippingInfo[0].HandlingTime[0]),
-                        },
-                SellingStatus: SellingStatus{
-                        CurrentPrice: Money{
-                                        i.SellingStatus[0].CurrentPrice[0].CurrencyId,
-                                        stof(i.SellingStatus[0].CurrentPrice[0].Amount),
-                                },
-                        ConvertedCurrentPrice: Money{
-                                        i.SellingStatus[0].ConvertedCurrentPrice[0].CurrencyId,
-                                        stof(i.SellingStatus[0].ConvertedCurrentPrice[0].Amount),
-                                },
-                        BidCount: stoi(i.SellingStatus[0].BidCount[0]),
-                        SellingState: i.SellingStatus[0].SellingState[0],
-                        TimeLeft: i.SellingStatus[0].TimeLeft[0],
-                        },
-                ListingInfo: ListingInfo{
-                        BestOfferEnabled: stob(i.ListingInfo[0].BestOfferEnabled[0]),
-                        BuyItNowAvailable: stob(i.ListingInfo[0].BuyItNowAvailable[0]),
-                        StartTime: i.ListingInfo[0].StartTime[0],
-                        EndTime: i.ListingInfo[0].EndTime[0],
-                        ListingType: i.ListingInfo[0].ListingType[0],
-                        Gift: stob(i.ListingInfo[0].Gift[0]),
-                        },
-                ReturnsAccepted: stob(i.ReturnsAccepted[0]),
-                Condition: Condition{
-                        ConditionId: i.Condition[0].ConditionId[0],
-                        ConditionDisplayName: i.Condition[0].ConditionDisplayName[0],
-                        },
-                }
-        }//for (items)
-        return
+func (app *App) Invoke(call eBayServiceCall) (str string, err os.Error) {
+        return app.post(call)
 }
 
-func (eb *App) GetCache() Cacher { return eb.cache }
-func (eb *App) SetCache(cache Cacher) (prev Cacher) {
-        prev = eb.cache
-        eb.cache = cache
+func (app *App) GetCache() Cacher { return app.cache }
+func (app *App) SetCache(cache Cacher) (prev Cacher) {
+        prev = app.cache
+        app.cache = cache
         return
 }

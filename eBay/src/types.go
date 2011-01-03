@@ -1,5 +1,24 @@
 package eBay
 
+// See http://developer.ebay.com/DevZone/XML/docs/Reference/eBay/types/DetailLevelCodeType.html
+// DetailLevelCodeType
+const (
+        ItemReturnAttributes = "ItemReturnAttributes"
+        ItemReturnCategories = "ItemReturnCategories"
+        ItemReturnDescription = "ItemReturnDescription"
+        ReturnAll = "ReturnAll"
+        ReturnHeaders = "ReturnHeaders"
+        ReturnMessages = "ReturnMessages"
+        ReturnSummary = "ReturnSummary"
+)
+
+// see http://developer.ebay.com/DevZone/XML/docs/Reference/eBay/types/WarningLevelCodeType.html
+//  WarningLevelCodeType
+const (
+        Low = "Low"
+        High = "High"
+)
+
 type Affiliate struct {
         CustomId string
         NetworkId string
@@ -55,8 +74,10 @@ type Condition struct {
 }
 
 type Category struct {
-        CategoryId string
+        CategoryID string
+        CategoryLevel int
         CategoryName string
+        CategoryParentID string
 }
 
 type Item struct {

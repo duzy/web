@@ -186,6 +186,7 @@ func _2float(v interface{}) (r float) {
         switch f := v.(type) {
         case float: r = f
         case float32: r = float(f)
+        case string: fmt.Sscanf(f, "%f", &r)
         }
         return
 }
@@ -257,8 +258,8 @@ func (c *dbCache) exec(sql string, params ...interface{}) (res web.QueryResult, 
                 q = strings.Replace(q, "?", `"` + s + `"`, 1)
         }
         res, err = c.db.Query(q)
-        if err != nil && strings.Index(err.String(), ":2014]") != -1 {
-                // give another try
+        if err != nil && strings.Index(err.String(), "[2014]") != -1 {
+                // reconnect and give another try
                 if err = c.db.Reconnect(); err == nil {
                         res, err = c.db.Query(q)
                 }
@@ -282,7 +283,7 @@ func (c *dbCache) get(sql string, params ...interface{}) (row []interface{}, err
 
 func (c *dbCache) CacheCategory(cat *Category) (err os.Error) {
         res, err := c.exec(SQL_INSERT_CACHE_CATEGORY_ROW,
-                cat.CategoryId,
+                cat.CategoryID,
                 cat.CategoryName )
         if err != nil { return }
         if res.GetAffectedRows() == 0 /*!= 1*/ {
@@ -295,7 +296,7 @@ func (c *dbCache) CacheItem(i *Item) (err os.Error) {
         res, err := c.exec(SQL_INSERT_CACHE_ITEM_ROW,
                 i.ItemId,
                 i.Title,
-                i.PrimaryCategory.CategoryId,
+                i.PrimaryCategory.CategoryID,
                 i.PrimaryCategory.CategoryName,
                 i.GalleryURL,
                 i.GalleryPlusPictureURL,
@@ -340,7 +341,7 @@ func (c *dbCache) GetCategory(id string) (cat *Category, err os.Error) {
         if err != nil { return }
 
         cat = &Category{
-        CategoryId: _2string(row[0]),
+        CategoryID: _2string(row[0]),
         CategoryName: _2string(row[1]),
         }
         return
@@ -354,7 +355,7 @@ func (c *dbCache) GetItem(id string) (itm *Item, err os.Error) {
         ItemId: id,
         Title: _2string(row[0]),
         PrimaryCategory: Category{
-                CategoryId: _2string(row[1]),
+                CategoryID: _2string(row[1]),
                 CategoryName: _2string(row[2]),
                 },
         GalleryURL: _2string(row[3]),

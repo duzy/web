@@ -14,16 +14,16 @@ func TestCacheCategory(t *testing.T) {
         defer c.Close()
 
         cat := &Category{
-        CategoryId: "123456",
+        CategoryID: "123456",
         CategoryName: fmt.Sprintf("test category: %v", time.Nanoseconds()),
         }
         err = c.CacheCategory(cat)
         if err != nil { t.Errorf("c.CacheCategory: %v", err); return }
 
-        cat2, err := c.GetCategory(cat.CategoryId)
-        if err != nil { t.Errorf("c.GetCategory(%s): %v", cat.CategoryId, err); return }
-        if cat2 == nil { t.Errorf("c.GetCategory(%s): no category returned", cat.CategoryId); return }
-        if cat.CategoryId != cat2.CategoryId { t.Errorf("wrong category: %v != %v", cat, cat2); return }
+        cat2, err := c.GetCategory(cat.CategoryID)
+        if err != nil { t.Errorf("c.GetCategory(%s): %v", cat.CategoryID, err); return }
+        if cat2 == nil { t.Errorf("c.GetCategory(%s): no category returned", cat.CategoryID); return }
+        if cat.CategoryID != cat2.CategoryID { t.Errorf("wrong category: %v != %v", cat, cat2); return }
         if cat.CategoryName != cat2.CategoryName { t.Errorf("wrong category: %v != %v", cat, cat2); return }
 }
 
@@ -37,7 +37,7 @@ func TestCacheItem(t *testing.T) {
         ItemId: "234567",
         Title: fmt.Sprintf("test-title: %v", time.Nanoseconds()),
         PrimaryCategory: Category{
-                CategoryId: "95840",
+                CategoryID: "95840",
                 CategoryName: "test-category",
                 },
         GalleryURL: "gallery-url",
