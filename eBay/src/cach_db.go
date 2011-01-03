@@ -11,21 +11,29 @@ const (
         SQL_CREATE_CACHE_CATEGORY_TABLE = `
 CREATE TABLE IF NOT EXISTS table_eBay_cache_categories(
   categoryId VARCHAR(32) PRIMARY KEY,
-  categoryName VARCHAR(128) NOT NULL
+  categoryLevel INT,
+  categoryName VARCHAR(128) NOT NULL,
+  categoryParentId VARCHAR(32)
 )
 `
         SQL_INSERT_CACHE_CATEGORY_ROW = `
-INSERT INTO table_eBay_cache_categories(categoryId, categoryName) VALUES(?,?)
-  ON DUPLICATE KEY UPDATE categoryName=VALUES(categoryName)
+INSERT INTO table_eBay_cache_categories(categoryId, categoryLevel, categoryName, categoryParentId)
+  VALUES(?,?,?,?)
+  ON DUPLICATE KEY UPDATE
+    categoryLevel=VALUES(categoryLevel),
+    categoryName=VALUES(categoryName),
+    categoryParentId=VALUES(categoryParentId)
 `
         SQL_SELECT_CACHE_CATEGORY_ROW = `
-SELECT categoryId, categoryName FROM table_eBay_cache_categories
+SELECT categoryId, categoryLevel, categoryName, categoryParentId
+  FROM table_eBay_cache_categories
   WHERE categoryId=? LIMIT 1
 `
         SQL_CREATE_CACHE_ITEM_TABLE = `
 CREATE TABLE IF NOT EXISTS table_eBay_cache_items(
   itemId VARCHAR(32) PRIMARY KEY,
   title VARCHAR(128) NOT NULL,
+  globalId VARCHAR(16),
   primaryCategory_CategoryId VARCHAR(32) NOT NULL,
   primaryCategory_CategoryName VARCHAR(128) NOT NULL,
   galleryURL VARCHAR(256),
@@ -65,6 +73,7 @@ CREATE TABLE IF NOT EXISTS table_eBay_cache_items(
 INSERT INTO table_eBay_cache_items(
   itemId,
   title,
+  globalId,
   primaryCategory_CategoryId,
   primaryCategory_CategoryName,
   galleryURL,
@@ -98,9 +107,10 @@ INSERT INTO table_eBay_cache_items(
   listingInfo_Gift,
   returnsAccepted,
   autoPay
-) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   ON DUPLICATE KEY UPDATE 
     title=VALUES(title),
+    globalId=VALUES(globalId),
     primaryCategory_CategoryId=VALUES(primaryCategory_CategoryId),
     primaryCategory_CategoryName=VALUES(primaryCategory_CategoryName),
     galleryURL=VALUES(galleryURL),
@@ -138,6 +148,7 @@ INSERT INTO table_eBay_cache_items(
         SQL_SELECT_CACHE_ITEM_ROW = `
 SELECT
   title,
+  globalId,
   primaryCategory_CategoryId,
   primaryCategory_CategoryName,
   galleryURL,
@@ -181,7 +192,14 @@ type dbCache struct {
 }
 
 func _2string(v interface{}) string { return fmt.Sprintf("%v",v) }
-func _2int(v interface{}) int { return v.(int) }
+func _2int(v interface{}) (r int) {
+        switch i := v.(type) {
+        //case float: int(i)
+        case string: fmt.Sscanf(i, "%d", &r)
+        case int: r = i
+        }
+        return
+}
 func _2float(v interface{}) (r float) {
         switch f := v.(type) {
         case float: r = f
@@ -213,20 +231,20 @@ func NewDBCache(params ...interface{}) (c Cacher, err os.Error) {
         dbm := web.GetDBManager()
         db, err := dbm.GetDatabase(cfg)
         if err == nil {
-                err = createCacheTables(db)
+                dbc := &dbCache{ db }
+                err = dbc.createCacheTables()
                 if err == nil {
-                        dbc := &dbCache{ db }
                         c = Cacher(dbc);
                 }
         }
         return
 }
 
-func createCacheTables(db web.Database) (err os.Error) {
+func (c *dbCache) createCacheTables() (err os.Error) {
         sql := SQL_CREATE_CACHE_CATEGORY_TABLE
         sql += ";\n"
         sql += SQL_CREATE_CACHE_ITEM_TABLE
-        _, err = db.Query(sql)
+        _, err = c.exec(sql)
         if err != nil { return }
         return
 }
@@ -284,7 +302,9 @@ func (c *dbCache) get(sql string, params ...interface{}) (row []interface{}, err
 func (c *dbCache) CacheCategory(cat *Category) (err os.Error) {
         res, err := c.exec(SQL_INSERT_CACHE_CATEGORY_ROW,
                 cat.CategoryID,
-                cat.CategoryName )
+                cat.CategoryLevel,
+                cat.CategoryName,
+                cat.CategoryParentID )
         if err != nil { return }
         if res.GetAffectedRows() == 0 /*!= 1*/ {
                 //err = os.NewError(fmt.Sprintf("%d rows affected", res.GetAffectedRows()))
@@ -296,6 +316,7 @@ func (c *dbCache) CacheItem(i *Item) (err os.Error) {
         res, err := c.exec(SQL_INSERT_CACHE_ITEM_ROW,
                 i.ItemId,
                 i.Title,
+                i.GlobalId,
                 i.PrimaryCategory.CategoryID,
                 i.PrimaryCategory.CategoryName,
                 i.GalleryURL,
@@ -342,7 +363,9 @@ func (c *dbCache) GetCategory(id string) (cat *Category, err os.Error) {
 
         cat = &Category{
         CategoryID: _2string(row[0]),
-        CategoryName: _2string(row[1]),
+        CategoryLevel: _2int(row[1]),
+        CategoryName: _2string(row[2]),
+        CategoryParentID: _2string(row[3]),
         }
         return
 }
@@ -354,55 +377,56 @@ func (c *dbCache) GetItem(id string) (itm *Item, err os.Error) {
         itm = &Item{
         ItemId: id,
         Title: _2string(row[0]),
+        GlobalId: _2string(row[1]),
         PrimaryCategory: Category{
-                CategoryID: _2string(row[1]),
-                CategoryName: _2string(row[2]),
+                CategoryID: _2string(row[2]),
+                CategoryName: _2string(row[3]),
                 },
-        GalleryURL: _2string(row[3]),
-        GalleryPlusPictureURL: _2string(row[4]),
-        ViewItemURL: _2string(row[5]),
-        ProductId: _2string(row[6]),
-        PaymentMethod: _2string(row[7]),
-        Location: _2string(row[8]),
-        Country: _2string(row[9]),
+        GalleryURL: _2string(row[4]),
+        GalleryPlusPictureURL: _2string(row[5]),
+        ViewItemURL: _2string(row[6]),
+        ProductId: _2string(row[7]),
+        PaymentMethod: _2string(row[8]),
+        Location: _2string(row[9]),
+        Country: _2string(row[10]),
         Condition: Condition{
-                ConditionId: _2string(row[10]),
-                ConditionDisplayName: _2string(row[11]),
+                ConditionId: _2string(row[11]),
+                ConditionDisplayName: _2string(row[12]),
                 },
         ShippingInfo: ShippingInfo{
                 ShippingServiceCost: Money{
-                        Amount: _2float(row[12]),
-                        CurrencyId: _2string(row[13]),
+                        Amount: _2float(row[13]),
+                        CurrencyId: _2string(row[14]),
                         },
-                ShippingType: _2string(row[14]),
-                ShipToLocations: _2string(row[15]),
-                HandlingTime: _2int(row[16]),
-                ExpeditedShipping: _2bool(row[17]),
-                OneDayShippingAvailable: _2bool(row[18]),
+                ShippingType: _2string(row[15]),
+                ShipToLocations: _2string(row[16]),
+                HandlingTime: _2int(row[17]),
+                ExpeditedShipping: _2bool(row[18]),
+                OneDayShippingAvailable: _2bool(row[19]),
                 },
                 SellingStatus: SellingStatus{
                         CurrentPrice: Money{
-                                Amount: _2float(row[19]),
-                                CurrencyId: _2string(row[20]),
+                                Amount: _2float(row[20]),
+                                CurrencyId: _2string(row[21]),
                                 },
                         ConvertedCurrentPrice: Money{
-                                Amount: _2float(row[21]),
-                                CurrencyId: _2string(row[22]),
+                                Amount: _2float(row[22]),
+                                CurrencyId: _2string(row[23]),
                                 },
-                        BidCount: _2int(row[23]),
-                        SellingState: _2string(row[24]),
-                        TimeLeft: _2string(row[25]),
+                        BidCount: _2int(row[24]),
+                        SellingState: _2string(row[25]),
+                        TimeLeft: _2string(row[26]),
                         },
                 ListingInfo: ListingInfo{
-                        StartTime: _2string(row[26]),
-                        EndTime: _2string(row[27]),
-                        ListingType: _2string(row[28]),
-                        BestOfferEnabled: _2bool(row[29]),
-                        BuyItNowAvailable: _2bool(row[30]),
-                        Gift: _2bool(row[31]),
+                        StartTime: _2string(row[27]),
+                        EndTime: _2string(row[28]),
+                        ListingType: _2string(row[29]),
+                        BestOfferEnabled: _2bool(row[30]),
+                        BuyItNowAvailable: _2bool(row[31]),
+                        Gift: _2bool(row[32]),
                         },
-                ReturnsAccepted: _2bool(row[32]),
-                AutoPay: _2bool(row[33]),
+                ReturnsAccepted: _2bool(row[33]),
+                AutoPay: _2bool(row[34]),
         }
 
         /*

@@ -321,7 +321,7 @@ func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
                 res.SearchResult.Item[n] = Item{
                 ItemId: i.ItemId[0],
                 Title: i.Title[0],
-                //GlobalId: i.GlobalId[0],
+                GlobalId: i.GlobalId[0],
                 PrimaryCategory: Category{
                         CategoryID: i.PrimaryCategory[0].CategoryId[0],
                         CategoryName: i.PrimaryCategory[0].CategoryName[0],

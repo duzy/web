@@ -40,6 +40,82 @@ type eBayServiceCall interface {
         GetMessage(app *App) (io.Reader, int)
 }
 
+type findItemsResponse struct {
+        Ack string
+        Version string
+        Timestamp string
+        SearchResult struct { Item []Item }
+        ItemSearchURL string
+        PaginationOutput PaginationOutput
+}
+
+type findItemsJSONResponse struct {
+        Ack []string
+        Version []string
+        Timestamp []string
+        SearchResult []struct {
+                Item []struct {
+                        ItemId []string
+                        Title []string
+                        GlobalId []string
+                        PrimaryCategory []struct {
+                                CategoryId []string
+                                CategoryName []string
+                        }
+                        GalleryURL []string
+                        ViewItemURL []string
+                        PaymentMethod []string
+                        AutoPay []string
+                        Location []string
+                        Country []string
+                        ShippingInfo []struct {
+                                ShippingServiceCost []struct {
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
+                                }
+                                ShippingType []string
+                                ShipToLocations []string
+                                ExpeditedShipping []string
+                                OneDayShippingAvailable []string
+                                HandlingTime []string
+                        }
+                        SellingStatus []struct {
+                                CurrentPrice []struct {
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
+                                }
+                                        ConvertedCurrentPrice []struct {
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
+                                }
+                                BidCount []string
+                                SellingState []string
+                                TimeLeft []string
+                        }
+                        ListingInfo []struct {
+                                BestOfferEnabled []string
+                                BuyItNowAvailable []string
+                                StartTime []string
+                                EndTime []string
+                                ListingType []string
+                                Gift []string
+                        }
+                        ReturnsAccepted []string
+                        Condition []struct {
+                                ConditionId []string
+                                ConditionDisplayName []string
+                        }
+                }
+        }
+        PaginationOutput []struct {
+                PageNumber []string
+                EntriesPerPage []string
+                TotalPages []string
+                TotalEntries []string
+        }
+        ItemSearchURL []string
+}
+
 func NewApp(sandbox bool) (app *App) {
         if sandbox {
                 app = &App {
@@ -161,6 +237,13 @@ func (app *App) post(call eBayServiceCall) (str string, err os.Error) {
         return
 }
 
+func (app *App) GetCache() Cacher { return app.cache }
+func (app *App) SetCache(cache Cacher) (prev Cacher) {
+        prev = app.cache
+        app.cache = cache
+        return
+}
+
 // NewFindingService returns a new eBay.FindingService.
 func (app *App) NewFindingService() (p *FindingService) {
         p = &FindingService{ app }
@@ -176,9 +259,3 @@ func (app *App) Invoke(call eBayServiceCall) (str string, err os.Error) {
         return app.post(call)
 }
 
-func (app *App) GetCache() Cacher { return app.cache }
-func (app *App) SetCache(cache Cacher) (prev Cacher) {
-        prev = app.cache
-        app.cache = cache
-        return
-}
