@@ -50,6 +50,7 @@ func ForEachField(s interface{}, f func(t *reflect.StructField, v reflect.Value)
         case *reflect.StructValue: v, ok = p, true
         case *reflect.PtrValue: v, ok = p.Elem().(*reflect.StructValue)
         }
+
         if !ok { err = os.NewError("interface is not *reflect.StructValue"); return }
 
         t, ok := v.Type().(*reflect.StructType)

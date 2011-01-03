@@ -9,6 +9,7 @@ import (
         "bytes"
         "strconv"
         "strings"
+        "reflect"
 )
 
 type FindingService struct {
@@ -16,10 +17,10 @@ type FindingService struct {
 }
 
 type eBayFindingServiceCall struct {
-        affiliate *Affiliate                    // Optional
-        buyerPostalCode string                  // Optional
-        paginationInput *PaginationInput        // Optional
-        sortOrder string                        // Optional
+        Affiliate Affiliate                     // Optional
+        BuyerPostalCode string                  // Optional
+        PaginationInput PaginationInput         // Optional
+        SortOrder string                        // Optional
 
         // TODO: aspectFilter, domainFilter, itemFilter, outputSelector, ...
 }
@@ -30,7 +31,7 @@ type eBayFindingService_GetVersion struct {
 
 type eBayFindingService_GetHistograms struct {
         eBayFindingServiceCall
-        categoryId string
+        CategoryID string
 }
 
 type eBayFindingService_GetSearchKeywordsRecommendation struct {
@@ -59,151 +60,132 @@ type eBayFindingService_FindItemsAdvanced struct {
         eBayFindingServiceCall
 }
 
-func (call *eBayFindingServiceCall) GetHeaders(app *App) (h map[string]string) {
+func (call *eBayFindingServiceCall) SetEntriesPerPage(count int) {
+        call.PaginationInput.EntriesPerPage = count
+}
+
+func eBayFindingCallOpName(call interface{}) (op string) {
+        switch call.(type) {
+        case *eBayFindingService_GetVersion:                            op = "getVersion"
+        case *eBayFindingService_GetHistograms:                         op = "getHistograms"
+        case *eBayFindingService_GetSearchKeywordsRecommendation:       op = "getSearchKeywordsRecommendation"
+        case *eBayFindingService_FindItemsByCategory:                   op = "findItemsByCategory"
+        case *eBayFindingService_FindItemsByProduct:                    op = "findItemsByProduct"
+        case *eBayFindingService_FindItemsIneBayStores:                 op = "findItemsIneBayStores"
+        case *eBayFindingService_FindItemsByKeywords:                   op = "findItemsByKeywords"
+        case *eBayFindingService_FindItemsAdvanced:                     op = "findItemsAdvanced"
+        }
         return
 }
 
-func (call *eBayFindingServiceCall) clear() {
-        call.affiliate = nil
-        call.buyerPostalCode = ""
-        call.paginationInput = nil
-        call.sortOrder = ""
-}
+func (call *eBayFindingServiceCall) GetURL(app *App) string { return URL_eBayFindingService }
 
-func (call *eBayFindingServiceCall) setEntriesPerPage(count int) {
-        if call.paginationInput == nil {
-                call.paginationInput = &PaginationInput{}
+func (call *eBayFindingServiceCall) getHeaders(ncall interface{}, app *App) (h map[string]string) {
+        oper := eBayFindingCallOpName(ncall)
+        h = map[string]string {
+                "X-EBAY-SOA-SERVICE-NAME": "FindingService",
+                "X-EBAY-SOA-SERVICE-VERSION": app.ServiceVersion,
+                "X-EBAY-SOA-OPERATION-NAME": oper,
+                "X-EBAY-SOA-GLOBAL-ID": app.GlobalID,
+                "X-EBAY-SOA-SECURITY-APPNAME": app.AppID,
+                "X-EBAY-SOA-REQUEST-DATA-FORMAT": "XML",
+                "X-EBAY-SOA-RESPONSE-DATA-FORMAT": app.ResponseFormat,
         }
-        call.paginationInput.EntriesPerPage = count
+        return
 }
 
-func (call *eBayFindingServiceCall) getMessage(name string) (io.ReadWriter, int) {
-        xmlns := "http://www.ebay.com/marketplace/search/v1/services"
+func (call *eBayFindingServiceCall) newMessage(ncall interface{}) (io.ReadWriter, int) {
+        const xmlns = "http://www.ebay.com/marketplace/search/v1/services"
+        name := eBayFindingCallOpName(ncall) + "Request"
         msg := bytes.NewBuffer(make([]byte, 0, 512))
         fmt.Fprintf(msg, "<?xml version='1.0' encoding='UTF-8'?>")
         fmt.Fprintf(msg, "<%s xmlns=\"%s\">", name, xmlns)
-        if call.affiliate != nil {
-                // TODO: xml.Escape(writer, bytes)...
-                fmt.Fprint(msg, "<affiliate>")
-                if call.affiliate.CustomId != "" {
-                        fmt.Fprintf(msg, "<customId>%s</customId>", call.affiliate.CustomId)
+
+        buf := bytes.NewBuffer(make([]byte, 0, 128))
+        b0 := bytes.NewBuffer(make([]byte, 0, 128))
+        f0 := func(t *reflect.StructField, v reflect.Value) (nxt bool) {
+                if v == nil || v.Interface() == nil { return true }
+
+                set := true
+                switch a := v.Interface().(type) {
+                case string:    set = a != ""
+                case int:       set = a != 0
+                case bool:      //set = a
+                default:
+                        fmt.Printf("todo: field: %s = %v\n", t.Name, v);
                 }
-                if call.affiliate.NetworkId != "" {
-                        fmt.Fprintf(msg, "<networkId>%s</networkId>", call.affiliate.NetworkId)
+
+                if set {
+                        name := strings.ToLower(t.Name[0:1])
+                        if l := len(t.Name) ; 1 < l { name += t.Name[1:l] }
+
+                        buf.Reset()
+                        xml.Escape(buf, []byte(fmt.Sprintf("%v", v.Interface())))
+                        fmt.Fprintf(b0, "<%s>%s</%s>", name, buf, name)
                 }
-                if call.affiliate.TrackingId != "" {
-                        fmt.Fprintf(msg, "<trackingId>%s</trackingId>", call.affiliate.TrackingId)
-                }
-                fmt.Fprint(msg, "</affiliate>")
+                return true
         }
-        if call.buyerPostalCode != "" {
-                fmt.Fprintf(msg, "<buyerPostalCode>%s</buyerPostalCode>", call.buyerPostalCode)
-        }
-        if call.paginationInput != nil {
-                fmt.Fprint(msg, "<paginationInput>")
-                if 0 < call.paginationInput.EntriesPerPage {
-                        fmt.Fprintf(msg, "<entriesPerPage>%v</entriesPerPage>", call.paginationInput.EntriesPerPage)
+        f := func(t *reflect.StructField, v reflect.Value) (nxt bool) {
+                name := strings.ToLower(t.Name[0:1])
+                if l := len(t.Name) ; 1 < l { name += t.Name[1:l] }
+
+                switch p := v.(type) {
+                case *reflect.StructValue:
+                        b0.Reset()
+                        ForEachField(p.Interface(), f0) // TODO: errors?
+                        if 0 < b0.Len() {
+                                fmt.Fprintf(msg, "<%s>%s</%s>", name, b0, name)
+                        }
+                        return true
+                case *reflect.PtrValue:
+                        if s, ok := p.Elem().(*reflect.StructValue); ok {
+                                b0.Reset()
+                                ForEachField(s.Interface(), f0) // TODO: errors?
+                                if 0 < b0.Len() {
+                                        fmt.Fprintf(msg, "<%s>%s</%s>", name, b0, name)
+                                }
+                                return true
+                        } else {
+                                v = p.Elem()
+                        }
                 }
-                if 0 < call.paginationInput.PageNumber {
-                        fmt.Fprintf(msg, "<pageNumber>%v</pageNumber>", call.paginationInput.PageNumber)
-                }
-                fmt.Fprint(msg, "</paginationInput>")
+
+                b0.Reset()
+                nxt = f0(t, v)
+                fmt.Fprint(msg, b0)
+                return
         }
-        if call.sortOrder != "" {
-                fmt.Fprintf(msg, "<sortOrder>%s</sortOrder>", call.sortOrder)
-        }
+        ForEachField(call, f)
+        ForEachField(ncall, f)
+        fmt.Fprintf(msg, "</%s>", name)
+
+        //fmt.Printf("finding: %s\n", msg)
         return io.ReadWriter(msg), msg.Len()
 }
 
-func (call *eBayFindingServiceCall) getURL(app *App, oper string) string {
-        u := URL_eBayFindingService
-        u += "?OPERATION-NAME=" + oper
-        u += "&SERVICE-VERSION=" + app.ServiceVersion
-        u += "&SECURITY-APPNAME=" + app.AppID
-        u += "&GLOBAL-ID=" + app.GlobalID
-        if app.ResponseFormat != "" {
-                u += "&RESPONSE-DATA-FORMAT=" + app.ResponseFormat
-        }
-        // u += "&REST-PAYLOAD"
-        return u
-}
+func (call *eBayFindingService_GetVersion)                      GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
+func (call *eBayFindingService_GetHistograms)                   GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
+func (call *eBayFindingService_GetSearchKeywordsRecommendation) GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
+func (call *eBayFindingService_FindItemsByKeywords)             GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
+func (call *eBayFindingService_FindItemsAdvanced)               GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
 
-func (call *eBayFindingService_GetVersion)              GetURL(app *App) string { return call.getURL(app, "getVersion") }
-func (call *eBayFindingService_GetHistograms)           GetURL(app *App) string { return call.getURL(app, "getHistograms") }
-func (call *eBayFindingService_GetSearchKeywordsRecommendation) GetURL(app *App) string { return call.getURL(app, "getSearchKeywordsRecommendation") }
-func (call *eBayFindingService_FindItemsByCategory)     GetURL(app *App) string { return call.getURL(app, "findItemsByCategory") }
-func (call *eBayFindingService_FindItemsByProduct)      GetURL(app *App) string { return call.getURL(app, "findItemsByProduct") }
-func (call *eBayFindingService_FindItemsIneBayStores)   GetURL(app *App) string { return call.getURL(app, "findItemsIneBayStores") }
-func (call *eBayFindingService_FindItemsByKeywords)     GetURL(app *App) string { return call.getURL(app, "findItemsByKeywords") }
-func (call *eBayFindingService_FindItemsAdvanced)       GetURL(app *App) string { return call.getURL(app, "findItemsAdvanced") }
-
-func (api *eBayFindingService_GetVersion) GetMessage(app *App) (io.Reader, int) {
-        api.clear()
-
-        // http://developer.ebay.com/DevZone/finding/CallRef/getVersion.html
-        msg, ml := api.getMessage("getVersionRequest")
-        fmt.Fprint(msg, "</getVersionRequest>")
-        return io.Reader(msg), ml
-}
-
-func (api *eBayFindingService_GetHistograms) GetMessage(app *App) (io.Reader, int) {
-        api.clear()
-
-        // http://developer.ebay.com/DevZone/finding/CallRef/getHistograms.html
-        msg, ml := api.getMessage("getHistogramsRequest")
-        fmt.Fprintf(msg, "<categoryId>%s</categoryId>", api.categoryId)
-        fmt.Fprint(msg, "</getHistogramsRequest>")
-        return io.Reader(msg), ml
-}
-
-func (api *eBayFindingService_GetSearchKeywordsRecommendation) GetMessage(app *App) (io.Reader, int) {
-        keywords := bytes.NewBuffer(make([]byte, 0, 128))
-        xml.Escape(keywords, []byte(api.keywords))
-
-        api.clear()
-
-        // http://developer.ebay.com/DevZone/finding/CallRef/getSearchKeywordsRecommendation.html
-        msg, ml := api.getMessage("getSearchKeywordsRecommendationRequest")
-        fmt.Fprintf(msg, "<Keywords>%s</Keywords>", keywords)
-        fmt.Fprint(msg, "</getSearchKeywordsRecommendationRequest>")
-        return io.Reader(msg), ml
-}
+// http://developer.ebay.com/DevZone/finding/CallRef/getVersion.html
+func (call *eBayFindingService_GetVersion)                      GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
+func (call *eBayFindingService_GetHistograms)                   GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
+func (call *eBayFindingService_GetSearchKeywordsRecommendation) GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
+func (call *eBayFindingService_FindItemsByKeywords)             GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
+func (call *eBayFindingService_FindItemsAdvanced)               GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
 
 // TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsByCategory.html
 // TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsByProduct.html
 // TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsIneBayStores.html
 // TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsAdvanced.html
 
-func (api *eBayFindingService_FindItemsByKeywords) GetMessage(app *App) (io.Reader, int) {
-        keywords := bytes.NewBuffer(make([]byte, 0, 128))
-        xml.Escape(keywords, []byte(api.keywords))
-
-        // http://developer.ebay.com/DevZone/finding/CallRef/findItemsByKeywords.html
-        msg, ml := api.getMessage("findItemsByKeywordsRequest")
-        fmt.Fprintf(msg, "<keywords>%s</keywords>", keywords)
-        fmt.Fprint(msg, "</findItemsByKeywordsRequest>")
-        return io.Reader(msg), ml
-}
-
-func (svc *FindingService) GetVersion() (str string, err os.Error) {
-        call := &eBayFindingService_GetVersion{}
-        str, err = svc.app.post(call)
-        return
-}
-
-func (svc *FindingService) FindItemsByKeywords(keywords string, count int) (str string, err os.Error) {
-        call := &eBayFindingService_FindItemsByKeywords{}
-        call.setEntriesPerPage(count)
-        call.keywords = keywords
-        str, err = svc.app.post(call)
-        //fmt.Printf("%s\n%s\n", call.GetURL(eb), call.GetMessage(eb))
-        return
-}
-
-func (svc *FindingService) FindItemsAdvanced() (str string, err os.Error) {
-        // TODO: ...
-        return
-}
+func (svc *FindingService) NewGetVersionCall() (call *eBayFindingService_GetVersion)                    { return &eBayFindingService_GetVersion{} }
+func (svc *FindingService) NewGetHistogramsCall() (call *eBayFindingService_GetHistograms)              { return &eBayFindingService_GetHistograms{} }
+func (svc *FindingService) NewGetSearchKeywordsRecommendationCall() (call *eBayFindingService_GetSearchKeywordsRecommendation) { return &eBayFindingService_GetSearchKeywordsRecommendation{} }
+func (svc *FindingService) NewFindItemsByKeywordsCall() (call *eBayFindingService_FindItemsByKeywords)  { return &eBayFindingService_FindItemsByKeywords{} }
+func (svc *FindingService) NewFindItemsAdvancedCall() (call *eBayFindingService_FindItemsAdvanced)      { return &eBayFindingService_FindItemsAdvanced{} }
 
 // ParseResponse parse text response of an eBay operation.
 func (svc *FindingService) ParseResponse(str string) (res *findItemsResponse, err os.Error) {

@@ -11,8 +11,9 @@ import (
 
 func TestAPIGetVersion(t *testing.T) {
         eb := NewApp(false)
-        fs := eb.NewFindingService()
-        s, err := fs.GetVersion() // FindService
+        svc := eb.NewFindingService()
+        call := svc.NewGetVersionCall() // FindService
+        s, err := eb.Invoke(call)
         if err != nil { t.Error(err); return }
 
         n := strings.Index(s, "<version>")
@@ -27,9 +28,11 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
                 eb := NewApp(false)
                 eb.ResponseFormat = "XML"
 
-                fs := eb.NewFindingService()
-
-                s, err := fs.FindItemsByKeywords("iPhone", 3)
+                svc := eb.NewFindingService()
+                call := svc.NewFindItemsByKeywordsCall()//("iPhone", 3)
+                call.keywords = "iPhone"
+                call.PaginationInput.EntriesPerPage = 3
+                s, err := eb.Invoke(call)
                 if err != nil { t.Error(err); goto finish }
 
                 //fmt.Printf("%s\n", s)
@@ -53,9 +56,11 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
                 eb := NewApp(false)
                 eb.ResponseFormat = "JSON"
 
-                fs := eb.NewFindingService()
-
-                s, err := fs.FindItemsByKeywords("Nokia N9", 3)
+                svc := eb.NewFindingService()
+                call := svc.NewFindItemsByKeywordsCall()//("Nokia N9", 3)
+                call.keywords = "Nokia N9"
+                call.PaginationInput.EntriesPerPage = 3
+                s, err := eb.Invoke(call)
                 if err != nil { t.Error(err); goto finish }
 
                 //fmt.Printf("%s\n", s)
@@ -194,7 +199,10 @@ func TestXMLUnmarshalFindItemsResponse(t *testing.T) {
 func TestFindingServiceParseResponse(t *testing.T) {
         a := NewApp(false)
         svc := a.NewFindingService()
-        xml, err := svc.FindItemsByKeywords("Nokia N8", 3)
+        call := svc.NewFindItemsByKeywordsCall()//("Nokia N8", 3)
+        call.keywords = "Nokia N8"
+        call.PaginationInput.EntriesPerPage = 3
+        xml, err := a.Invoke(call)
         if err != nil { t.Error(err); return }
 
         res, err := svc.ParseResponse(xml)
@@ -203,7 +211,7 @@ func TestFindingServiceParseResponse(t *testing.T) {
         if err != nil { t.Error(err); return }
         if res == nil { t.Error("no xml response"); return }
         if len(res.SearchResult.Item) != 3 {
-                t.Error("xml: not 3 items:", len(res.SearchResult.Item))
+                t.Errorf("xml: not 3 items: %v", len(res.SearchResult.Item))
                 return
         }
 
@@ -211,7 +219,10 @@ func TestFindingServiceParseResponse(t *testing.T) {
         a.ResponseFormat = "JSON"
 
         // test JSON response
-        json, err := svc.FindItemsByKeywords("Nokia N8", 3)
+        call = svc.NewFindItemsByKeywordsCall()//("Nokia N8", 3)
+        call.keywords = "Nokia N8"
+        call.PaginationInput.EntriesPerPage = 3
+        json, err := a.Invoke(call)
         if err != nil { t.Error(err); return }
 
         //fmt.Printf("json: %v\n",json)

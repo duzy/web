@@ -41,7 +41,7 @@ func (call *eBayTradingCall) GetURL(app *App) (u string) {
 
 func eBayTradingCallOpName(call interface{}) (op string) {
         switch call.(type) {
-        case *eBayTradingCall_GetCategories: op = "GetCategoriesRequest"
+        case *eBayTradingCall_GetCategories: op = "GetCategories"
         }
         return
 }
@@ -50,7 +50,7 @@ func (call *eBayTradingCall) newMessage(ncall interface{}, app *App) (msg *bytes
         userToken := bytes.NewBuffer(make([]byte, 0, 128))
         xml.Escape(userToken, []uint8(app.UserToken))
 
-        name := eBayTradingCallOpName(ncall)
+        name := eBayTradingCallOpName(ncall) + "Request"
         if name == "" { return nil, 0 }
 
         xmlns := "urn:ebay:apis:eBLBaseComponents"
