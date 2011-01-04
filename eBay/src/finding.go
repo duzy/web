@@ -297,10 +297,6 @@ func (svc *FindingService) parseJSONResponse(str string) (res *findItemsResponse
         return
 }
 
-func copyFields(lhs, rhs interface{}) (err os.Error) {
-        
-}
-
 func stoi(s string) (i int) { i, _ = strconv.Atoi(s); return }
 func stof(s string) (f float) { f, _ = strconv.Atof(s); return }
 func stob(s string) (b bool) { b, _ = strconv.Atob(s); return }
@@ -323,7 +319,7 @@ func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
 
         for n, i := range r.SearchResult[0].Item {
                 res.SearchResult.Item[n] = Item{}
-                copyFields(&(res.SearchResult.Item[n]), &i)
+                CopyFields(&(res.SearchResult.Item[n]), &i)
         }
 
         /*

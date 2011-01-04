@@ -2,6 +2,8 @@ package eBay
 
 import (
         "os"
+        "fmt"
+        "strconv"
         "reflect"
 )
 
@@ -96,5 +98,72 @@ func MapFields(lhs, rhs interface{}, f func(lf, rf reflect.Value)(nxt bool)) (er
                         if !f(v, rf) { break }
                 }
         }
+        return
+}
+
+func ConvertValue(k reflect.Kind, v reflect.Value) (ov reflect.Value) {
+        if k == v.Type().Kind() { ov = v; return }
+
+        // TODO: reflect.ArrayOrSliceValue
+        if a, ok := v.(*reflect.SliceValue); ok {
+                if 0 < a.Len() { v = a.Elem(0) } else { return }
+        }
+        if a, ok := v.(*reflect.ArrayValue); ok {
+                if 0 < a.Len() { v = a.Elem(0) } else { return }
+        }
+
+        s := v.Interface().(string) // TODO: arbitray type
+        switch k {
+        case reflect.Bool:      if o, e := strconv.Atob(s); e == nil { ov = reflect.NewValue(o) }
+        case reflect.Int:       if o, e := strconv.Atoi(s); e == nil { ov = reflect.NewValue(o) }
+        case reflect.Float:     if o, e := strconv.Atof(s); e == nil { ov = reflect.NewValue(o) }
+        case reflect.String:    ov = reflect.NewValue(s)
+        default:
+                fmt.Printf("todo: convert: (%s) %v -> (%s)\n", v.Type().Kind(), v.Interface(), k)
+        }
+        return
+}
+
+func AssignValue(lhs, rhs reflect.Value) (err os.Error) {
+        switch lv := lhs.(type) {
+        case *reflect.StructValue:
+                err = CopyFields(lhs.Interface(), rhs.Interface())
+        //case *reflect.SliceValue:
+        //case *reflect.ArrayValue:
+        default:
+                if v := ConvertValue(lhs.Type().Kind(), rhs); v != nil {
+                        lhs.SetValue(v)
+                } else {
+                        fmt.Printf("todo: assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
+                }
+        }
+        return
+}
+
+func CopyFields(lhs, rhs interface{}) (err os.Error) {
+        if lhs == nil { err = os.NewError("lhs is nil"); return }
+        if rhs == nil { err = os.NewError("rhs is nil"); return }
+
+        var rv *reflect.StructValue
+        switch v := reflect.NewValue(rhs).(type) {
+        case *reflect.StructValue: rv = v
+        case *reflect.PtrValue:
+                if r, ok := v.Elem().(*reflect.StructValue); ok { rv = r }
+        default:
+                err = os.NewError("rhs is not *reflect.StructValue")
+                return
+        }
+
+        rt := rv.Type().(*reflect.StructType)
+
+        ForEachField(lhs, func(t *reflect.StructField, v reflect.Value)(nxt bool) {
+                var ft reflect.StructField
+                if t, ok := rt.FieldByName(t.Name); ok { ft = t } else { return true }
+
+                fv := rv.FieldByIndex(ft.Index)
+
+                err = AssignValue(v, fv)
+                return true
+        })
         return
 }
