@@ -12,6 +12,82 @@ import (
         "reflect"
 )
 
+type findItemsResponse struct {
+        Ack string
+        Version string
+        Timestamp string
+        SearchResult struct { Item []Item }
+        ItemSearchURL string
+        PaginationOutput PaginationOutput
+}
+
+type findItemsResponseJSON struct {
+        Ack []string
+        Version []string
+        Timestamp []string
+        SearchResult []struct {
+                Item []struct {
+                        ItemId []string
+                        Title []string
+                        GlobalId []string
+                        PrimaryCategory []struct {
+                                CategoryId []string
+                                CategoryName []string
+                        }
+                        GalleryURL []string
+                        ViewItemURL []string
+                        PaymentMethod []string
+                        AutoPay []string
+                        Location []string
+                        Country []string
+                        ShippingInfo []struct {
+                                ShippingServiceCost []struct {
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
+                                }
+                                ShippingType []string
+                                ShipToLocations []string
+                                ExpeditedShipping []string
+                                OneDayShippingAvailable []string
+                                HandlingTime []string
+                        }
+                        SellingStatus []struct {
+                                CurrentPrice []struct {
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
+                                }
+                                        ConvertedCurrentPrice []struct {
+                                        CurrencyId string "@currencyId"
+                                        Amount string "__value__"
+                                }
+                                BidCount []string
+                                SellingState []string
+                                TimeLeft []string
+                        }
+                        ListingInfo []struct {
+                                BestOfferEnabled []string
+                                BuyItNowAvailable []string
+                                StartTime []string
+                                EndTime []string
+                                ListingType []string
+                                Gift []string
+                        }
+                        ReturnsAccepted []string
+                        Condition []struct {
+                                ConditionId []string
+                                ConditionDisplayName []string
+                        }
+                }
+        }
+        PaginationOutput []struct {
+                PageNumber []string
+                EntriesPerPage []string
+                TotalPages []string
+                TotalEntries []string
+        }
+        ItemSearchURL []string
+}
+
 type FindingService struct {
         app *App
 }
@@ -273,34 +349,34 @@ func getJSONResponseType(str string) (typ string) {
 
 // parseJSONResponse parse JSON format response
 func (svc *FindingService) parseJSONResponse(str string) (res *findItemsResponse, err os.Error) {
-        ra := make([]*findItemsJSONResponse, 1)
+        ra := make([]*findItemsResponseJSON, 1)
 
         var v interface{}
         switch t := getJSONResponseType(str[0:]); t {
         case "findItemsByCategoryResponse":
-                v = &struct { V []*findItemsJSONResponse "findItemsByCategoryResponse" }{ ra }
+                v = &struct { V []*findItemsResponseJSON "findItemsByCategoryResponse" }{ ra }
         case "findItemsByProductResponse":
-                v = &struct { V []*findItemsJSONResponse "findItemsByProductResponse" }{ ra }
+                v = &struct { V []*findItemsResponseJSON "findItemsByProductResponse" }{ ra }
         case "findItemsIneBayStoresResponse":
-                v = &struct { V []*findItemsJSONResponse "findItemsIneBayStoresResponse" }{ ra }
+                v = &struct { V []*findItemsResponseJSON "findItemsIneBayStoresResponse" }{ ra }
         case "findItemsByKeywordsResponse":
-                v = &struct { V []*findItemsJSONResponse "findItemsByKeywordsResponse" }{ ra }
+                v = &struct { V []*findItemsResponseJSON "findItemsByKeywordsResponse" }{ ra }
         case "findItemsAdvancedResponse":
-                v = &struct { V []*findItemsJSONResponse "findItemsAdvancedResponse" }{ ra }
+                v = &struct { V []*findItemsResponseJSON "findItemsAdvancedResponse" }{ ra }
         default:
                 err = os.NewError("unknown JSON response: '"+t+"'")
                 return
         }
 
         err = json.Unmarshal([]byte(str), v)
-        if err == nil { res = noJSON(ra[0]) }
+        if err == nil { res, err = noJSON(ra[0]) }
         return
 }
 
-func stoi(s string) (i int) { i, _ = strconv.Atoi(s); return }
-func stof(s string) (f float) { f, _ = strconv.Atof(s); return }
-func stob(s string) (b bool) { b, _ = strconv.Atob(s); return }
-func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
+ func stoi(s string) (i int) { i, _ = strconv.Atoi(s); return }
+ func stof(s string) (f float) { f, _ = strconv.Atof(s); return }
+ func stob(s string) (b bool) { b, _ = strconv.Atob(s); return }
+func noJSON(r *findItemsResponseJSON) (res *findItemsResponse, err os.Error) {
         res = &findItemsResponse{
         Ack: r.Ack[0],
         Version: r.Version[0],
@@ -319,64 +395,14 @@ func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
 
         for n, i := range r.SearchResult[0].Item {
                 res.SearchResult.Item[n] = Item{}
-                RoughAssign(&(res.SearchResult.Item[n]), &i)
+                err = RoughAssign(&(res.SearchResult.Item[n]), &i)
         }
-
         /*
-        for n, i := range r.SearchResult[0].Item {
-                res.SearchResult.Item[n] = Item{
-                ItemId: i.ItemId[0],
-                Title: i.Title[0],
-                GlobalId: i.GlobalId[0],
-                PrimaryCategory: Category{
-                        CategoryID: i.PrimaryCategory[0].CategoryId[0],
-                        CategoryName: i.PrimaryCategory[0].CategoryName[0],
-                        },
-                GalleryURL: i.GalleryURL[0],
-                ViewItemURL: i.ViewItemURL[0],
-                PaymentMethod: i.PaymentMethod[0],
-                AutoPay: stob(i.AutoPay[0]),
-                Location: i.Location[0],
-                Country: i.Country[0],
-                ShippingInfo: ShippingInfo{
-                        ShippingServiceCost: Money{
-                                        i.ShippingInfo[0].ShippingServiceCost[0].CurrencyId,
-                                        stof(i.ShippingInfo[0].ShippingServiceCost[0].Amount),
-                                },
-                        ShippingType: i.ShippingInfo[0].ShippingType[0],
-                        ShipToLocations: strings.Join(i.ShippingInfo[0].ShipToLocations,","),
-                        ExpeditedShipping: stob(i.ShippingInfo[0].ExpeditedShipping[0]),
-                        OneDayShippingAvailable: stob(i.ShippingInfo[0].OneDayShippingAvailable[0]),
-                        HandlingTime: stoi(i.ShippingInfo[0].HandlingTime[0]),
-                        },
-                SellingStatus: SellingStatus{
-                        CurrentPrice: Money{
-                                        i.SellingStatus[0].CurrentPrice[0].CurrencyId,
-                                        stof(i.SellingStatus[0].CurrentPrice[0].Amount),
-                                },
-                        ConvertedCurrentPrice: Money{
-                                        i.SellingStatus[0].ConvertedCurrentPrice[0].CurrencyId,
-                                        stof(i.SellingStatus[0].ConvertedCurrentPrice[0].Amount),
-                                },
-                        BidCount: stoi(i.SellingStatus[0].BidCount[0]),
-                        SellingState: i.SellingStatus[0].SellingState[0],
-                        TimeLeft: i.SellingStatus[0].TimeLeft[0],
-                        },
-                ListingInfo: ListingInfo{
-                        BestOfferEnabled: stob(i.ListingInfo[0].BestOfferEnabled[0]),
-                        BuyItNowAvailable: stob(i.ListingInfo[0].BuyItNowAvailable[0]),
-                        StartTime: i.ListingInfo[0].StartTime[0],
-                        EndTime: i.ListingInfo[0].EndTime[0],
-                        ListingType: i.ListingInfo[0].ListingType[0],
-                        Gift: stob(i.ListingInfo[0].Gift[0]),
-                        },
-                ReturnsAccepted: stob(i.ReturnsAccepted[0]),
-                Condition: Condition{
-                        ConditionId: i.Condition[0].ConditionId[0],
-                        ConditionDisplayName: i.Condition[0].ConditionDisplayName[0],
-                        },
-                }
-        }//for (items)
+         */
+
+        /* // TODO use this
+        res = &findItemsResponse{}
+        err = RoughAssign(res, r)
          */
         return
 }

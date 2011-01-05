@@ -5,6 +5,7 @@ import (
         "fmt"
         "strconv"
         "reflect"
+        //"runtime"
 )
 
 // AssignFields assign left-hand-side fields to right-hand-side fields of
@@ -104,13 +105,11 @@ func MapFields(lhs, rhs interface{}, f func(lf, rf reflect.Value)(nxt bool)) (er
 func ConvertValue(k reflect.Kind, v reflect.Value) (ov reflect.Value) {
         if k == v.Type().Kind() { ov = v; return }
 
-        // TODO: reflect.ArrayOrSliceValue
-        if a, ok := v.(*reflect.SliceValue); ok {
+        if a, ok := v.(reflect.ArrayOrSliceValue); ok {
                 if 0 < a.Len() { v = a.Elem(0) } else { return }
         }
-        if a, ok := v.(*reflect.ArrayValue); ok {
-                if 0 < a.Len() { v = a.Elem(0) } else { return }
-        }
+
+        if k == v.Type().Kind() { ov = v; return }
 
         s := v.Interface().(string) // TODO: arbitray type
         switch k {
@@ -125,12 +124,20 @@ func ConvertValue(k reflect.Kind, v reflect.Value) (ov reflect.Value) {
 }
 
 func RoughAssignValue(lhs, rhs reflect.Value) (err os.Error) {
+        //if p, ok := lhs.(*reflect.InterfaceValue); ok { lhs = p.Elem(); }
+        //if p, ok := rhs.(*reflect.InterfaceValue); ok { rhs = p.Elem(); }
         if p, ok := lhs.(*reflect.PtrValue); ok { lhs = p.Elem(); }
         if p, ok := rhs.(*reflect.PtrValue); ok { rhs = p.Elem(); }
 
         switch lv := lhs.(type) {
         case *reflect.StructValue:
-                //fmt.Printf("assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
+                // Make sure rhs is also StructValue
+                //      eg: []struct{} -> struct{}
+                rhs = ConvertValue(reflect.Struct, rhs)
+                if rhs == nil {
+                        err = os.NewError("rhs is not *reflect.StructValue")
+                }
+
                 if rv, ok := rhs.(*reflect.StructValue); ok {
                         lt := lv.Type().(*reflect.StructType)
                         //rt := rv.Type().(*reflect.StructType)
@@ -144,10 +151,21 @@ func RoughAssignValue(lhs, rhs reflect.Value) (err os.Error) {
                 } else {
                         err = os.NewError("rhs is not *reflect.StructValue")
                 }
-        //case *reflect.SliceValue:
-        //case *reflect.ArrayValue:
+        case reflect.ArrayOrSliceValue:
+                if rv, ok := rhs.(reflect.ArrayOrSliceValue); ok {
+                        //lv = reflect.MakeSlice(lv.Type().(*reflect.SliceType), rv.Len(), rv.Len())
+                        for i := 0 ; i < lv.Len() && i < rv.Len(); i += 1 {
+                                err = RoughAssign(lv.Elem(i), rv.Elem(i))
+                        }
+                } else {
+                        //lv = reflect.MakeSlice(lv.Type().(*reflect.SliceType), 1, 1)
+                        if 0 < lv.Len() && 0 < rv.Len() {
+                                err = RoughAssign(lv.Elem(0), rv.Elem(0))
+                        }
+                }
         default:
                 if v := ConvertValue(lhs.Type().Kind(), rhs); v != nil {
+                        fmt.Printf("assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
                         lhs.SetValue(v)
                 } else {
                         fmt.Printf("todo: assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
@@ -157,5 +175,19 @@ func RoughAssignValue(lhs, rhs reflect.Value) (err os.Error) {
 }
 
 func RoughAssign(lhs, rhs interface{}) (err os.Error) {
-        return RoughAssignValue(reflect.NewValue(lhs), reflect.NewValue(rhs))
+        /*
+        defer func() {
+                if r := recover(); r != nil {
+                        if e, ok := r.(os.Error); ok {
+                                err = e
+                        //} else if _, ok := r.(runtime.Error); ok {
+                        } else {
+                                panic(r)
+                        }
+                }
+        }()
+         */
+
+        lv, rv := reflect.NewValue(lhs), reflect.NewValue(rhs)
+        return RoughAssignValue(lv, rv)
 }

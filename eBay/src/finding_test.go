@@ -126,7 +126,7 @@ func TestXMLUnmarshalFindItemsResponse(t *testing.T) {
         if v.PaginationOutput.TotalEntries != 4735 { t.Error("paginationOutput.totalEntries:",v.PaginationOutput.TotalEntries); return }
 
         jv := &struct {
-                V []findItemsJSONResponse "findItemsByKeywordsResponse"
+                V []findItemsResponseJSON "findItemsByKeywordsResponse"
         }{}
         err = json.Unmarshal([]byte(j), jv)
         if err != nil { t.Error(err); return }
@@ -163,37 +163,38 @@ func TestXMLUnmarshalFindItemsResponse(t *testing.T) {
         if ja.PaginationOutput[0].TotalPages[0] != "1577" { t.Error("json: PaginationOutput:",ja.PaginationOutput[0]); return }
         if ja.PaginationOutput[0].TotalEntries[0] != "4730" { t.Error("json: PaginationOutput:",ja.PaginationOutput[0]); return }
 
-        v = noJSON(ja)
-        if v.Ack != "Success" { t.Error("nojson: ack:",v.Ack); return }
-        if v.Version != "1.8.0" { t.Error("nojson: version:",v.Version); return }
-        if v.Timestamp != "2010-12-26T06:17:22.587Z" { t.Error("nojson: timestamp:",v.Timestamp); return }
-        if len(v.SearchResult.Item) != 3 { t.Error("nojson: not 3 items"); return }
-        if v.SearchResult.Item[0].ItemId != "120663454616" { t.Error("nojson: wrong item[0]: ",v.SearchResult.Item[0]); return }
-        if v.SearchResult.Item[1].ItemId != "250743776675" { t.Error("nojson: wrong item[1]: ",v.SearchResult.Item[1]); return }
-        if v.SearchResult.Item[2].ItemId != "250745791164" { t.Error("nojson: wrong item[2]: ",v.SearchResult.Item[2]); return }
-        if v.SearchResult.Item[0].ShippingInfo.ShippingServiceCost.CurrencyId != "USD" { t.Error("nojson: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
-        if v.SearchResult.Item[0].ShippingInfo.ShippingServiceCost.Amount != 5.99 { t.Error("nojson: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
-        if v.SearchResult.Item[0].ShippingInfo.ShippingType != "Flat" { t.Error("nojson: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
-        if v.SearchResult.Item[0].ShippingInfo.ShipToLocations != "Worldwide" { t.Error("nojson: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
-        if v.SearchResult.Item[0].ShippingInfo.ExpeditedShipping != false { t.Error("nojson: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
-        if v.SearchResult.Item[0].ShippingInfo.OneDayShippingAvailable != false { t.Error("nojson: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
-        if v.SearchResult.Item[0].ShippingInfo.HandlingTime != 2 { t.Error("nojson: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
-        if v.SearchResult.Item[0].SellingStatus.CurrentPrice.CurrencyId != "USD" { t.Error("nojson: wrong currentprice:",v.SearchResult.Item[0].SellingStatus.CurrentPrice); return }
-        if v.SearchResult.Item[0].SellingStatus.CurrentPrice.Amount != 450.0 { t.Error("nojson: wrong currentprice:",v.SearchResult.Item[0].SellingStatus.CurrentPrice); return }
-        if v.SearchResult.Item[0].SellingStatus.BidCount != 2 { t.Error("nojson: SellingStatus:",v.SearchResult.Item[0].SellingStatus); return }
-        if v.SearchResult.Item[0].SellingStatus.SellingState != "Active" { t.Error("nojson: SellingStatus:",v.SearchResult.Item[0].SellingStatus); return }
-        if v.SearchResult.Item[0].SellingStatus.TimeLeft != "P0DT12H23M7S" { t.Error("nojson: SellingStatus:",v.SearchResult.Item[0].SellingStatus); return }
-        if v.SearchResult.Item[0].ListingInfo.BestOfferEnabled != false { t.Error("nojson: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
-        if v.SearchResult.Item[0].ListingInfo.BuyItNowAvailable != false { t.Error("nojson: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
-        if v.SearchResult.Item[0].ListingInfo.StartTime != "2010-12-23T18:40:29.000Z" { t.Error("nojson: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
-        if v.SearchResult.Item[0].ListingInfo.EndTime != "2010-12-26T18:40:29.000Z" { t.Error("nojson: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
-        if v.SearchResult.Item[0].ListingInfo.ListingType != "Auction" { t.Error("nojson: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
-        if v.SearchResult.Item[0].ListingInfo.Gift != false { t.Error("nojson: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
-        if v.ItemSearchURL != "http://shop.ebay.com/i.html?_nkw=Nokia+N8&_ddo=1&_ipg=3&_pgn=1" { t.Error("nojson: itemSearchURL: ",v.ItemSearchURL); return }
-        if v.PaginationOutput.PageNumber != 1 { t.Error("nojson: paginationOutput.pageNumber:",v.PaginationOutput.PageNumber); return }
-        if v.PaginationOutput.EntriesPerPage != 3 { t.Error("nojson: paginationOutput.entriesPerPage:",v.PaginationOutput.EntriesPerPage); return }
-        if v.PaginationOutput.TotalPages != 1577 { t.Error("nojson: paginationOutput.totalPages:",v.PaginationOutput.TotalPages); return }
-        if v.PaginationOutput.TotalEntries != 4730 { t.Error("nojson: paginationOutput.totalEntries:",v.PaginationOutput.TotalEntries); return }
+        v, err = noJSON(ja)
+        if err != nil { t.Error("noJSON: %v", err); return }
+        if v.Ack != "Success" { t.Error("noJSON: ack:",v.Ack); return }
+        if v.Version != "1.8.0" { t.Error("noJSON: version:",v.Version); return }
+        if v.Timestamp != "2010-12-26T06:17:22.587Z" { t.Error("noJSON: timestamp:",v.Timestamp); return }
+        if len(v.SearchResult.Item) != 3 { t.Error("noJSON: not 3 items"); return }
+        if v.SearchResult.Item[0].ItemId != "120663454616" { t.Error("noJSON: wrong item[0]: ",v.SearchResult.Item[0]); return }
+        if v.SearchResult.Item[1].ItemId != "250743776675" { t.Error("noJSON: wrong item[1]: ",v.SearchResult.Item[1]); return }
+        if v.SearchResult.Item[2].ItemId != "250745791164" { t.Error("noJSON: wrong item[2]: ",v.SearchResult.Item[2]); return }
+        if v.SearchResult.Item[0].ShippingInfo.ShippingServiceCost.CurrencyId != "USD" { t.Error("noJSON: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
+        if v.SearchResult.Item[0].ShippingInfo.ShippingServiceCost.Amount != 5.99 { t.Error("noJSON: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
+        if v.SearchResult.Item[0].ShippingInfo.ShippingType != "Flat" { t.Error("noJSON: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
+        if v.SearchResult.Item[0].ShippingInfo.ShipToLocations != "Worldwide" { t.Error("noJSON: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
+        if v.SearchResult.Item[0].ShippingInfo.ExpeditedShipping != false { t.Error("noJSON: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
+        if v.SearchResult.Item[0].ShippingInfo.OneDayShippingAvailable != false { t.Error("noJSON: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
+        if v.SearchResult.Item[0].ShippingInfo.HandlingTime != 2 { t.Error("noJSON: ShippingInfo:", v.SearchResult.Item[0].ShippingInfo); return }
+        if v.SearchResult.Item[0].SellingStatus.CurrentPrice.CurrencyId != "USD" { t.Error("noJSON: wrong currentprice:",v.SearchResult.Item[0].SellingStatus.CurrentPrice); return }
+        if v.SearchResult.Item[0].SellingStatus.CurrentPrice.Amount != 450.0 { t.Error("noJSON: wrong currentprice:",v.SearchResult.Item[0].SellingStatus.CurrentPrice); return }
+        if v.SearchResult.Item[0].SellingStatus.BidCount != 2 { t.Error("noJSON: SellingStatus:",v.SearchResult.Item[0].SellingStatus); return }
+        if v.SearchResult.Item[0].SellingStatus.SellingState != "Active" { t.Error("noJSON: SellingStatus:",v.SearchResult.Item[0].SellingStatus); return }
+        if v.SearchResult.Item[0].SellingStatus.TimeLeft != "P0DT12H23M7S" { t.Error("noJSON: SellingStatus:",v.SearchResult.Item[0].SellingStatus); return }
+        if v.SearchResult.Item[0].ListingInfo.BestOfferEnabled != false { t.Error("noJSON: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
+        if v.SearchResult.Item[0].ListingInfo.BuyItNowAvailable != false { t.Error("noJSON: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
+        if v.SearchResult.Item[0].ListingInfo.StartTime != "2010-12-23T18:40:29.000Z" { t.Error("noJSON: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
+        if v.SearchResult.Item[0].ListingInfo.EndTime != "2010-12-26T18:40:29.000Z" { t.Error("noJSON: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
+        if v.SearchResult.Item[0].ListingInfo.ListingType != "Auction" { t.Error("noJSON: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
+        if v.SearchResult.Item[0].ListingInfo.Gift != false { t.Error("noJSON: ListingInfo:",v.SearchResult.Item[0].ListingInfo); return }
+        if v.ItemSearchURL != "http://shop.ebay.com/i.html?_nkw=Nokia+N8&_ddo=1&_ipg=3&_pgn=1" { t.Error("noJSON: itemSearchURL: ",v.ItemSearchURL); return }
+        if v.PaginationOutput.PageNumber != 1 { t.Error("noJSON: paginationOutput.pageNumber:",v.PaginationOutput.PageNumber); return }
+        if v.PaginationOutput.EntriesPerPage != 3 { t.Error("noJSON: paginationOutput.entriesPerPage:",v.PaginationOutput.EntriesPerPage); return }
+        if v.PaginationOutput.TotalPages != 1577 { t.Error("noJSON: paginationOutput.totalPages:",v.PaginationOutput.TotalPages); return }
+        if v.PaginationOutput.TotalEntries != 4730 { t.Error("noJSON: paginationOutput.totalEntries:",v.PaginationOutput.TotalEntries); return }
 }
 
 func TestFindingServiceParseResponse(t *testing.T) {

@@ -48,12 +48,52 @@ func TestUtilMapFields(t *testing.T) {
 }
 
 func TestUtilConvertValue(t *testing.T) {
+        // Scalar to scalar convertion:
+
+        if v := ConvertValue(reflect.Int, reflect.NewValue("100")); v != nil {
+                a, ok := v.Interface().(int)
+                if !ok || a != 100 { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+        } else { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+
+        if v := ConvertValue(reflect.Float, reflect.NewValue("0.1")); v != nil {
+                a, ok := v.Interface().(float)
+                if !ok || a != 0.1 { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+        } else { t.Errorf("ConvertValue: failed: string -> float: %v", v); return }
+
+        if v := ConvertValue(reflect.Bool, reflect.NewValue("true")); v != nil {
+                a, ok := v.Interface().(bool)
+                if !ok || a != true { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+        } else { t.Errorf("ConvertValue: failed: string -> float: %v", v); return }
+
+        if v := ConvertValue(reflect.String, reflect.NewValue("foo")); v != nil {
+                a, ok := v.Interface().(string)
+                if !ok || a != "foo" { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+        } else { t.Errorf("ConvertValue: failed: string -> string: %v", v); return }
+
+        // Array to scalar convertion:
+
+        if v := ConvertValue(reflect.Int, reflect.NewValue([]string{"100"})); v != nil {
+                a, ok := v.Interface().(int)
+                if !ok || a != 100 { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+        } else { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+
+        if v := ConvertValue(reflect.Float, reflect.NewValue([]string{"0.1"})); v != nil {
+                a, ok := v.Interface().(float)
+                if !ok || a != 0.1 { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+        } else { t.Errorf("ConvertValue: failed: string -> float: %v", v); return }
+
+        if v := ConvertValue(reflect.Bool, reflect.NewValue([]string{"true"})); v != nil {
+                a, ok := v.Interface().(bool)
+                if !ok || a != true { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+        } else { t.Errorf("ConvertValue: failed: string -> float: %v", v); return }
+
+        if v := ConvertValue(reflect.String, reflect.NewValue([]string{"foo"})); v != nil {
+                a, ok := v.Interface().(string)
+                if !ok || a != "foo" { t.Errorf("ConvertValue: failed: string -> int: %v", v); return }
+        } else { t.Errorf("ConvertValue: failed: string -> string: %v", v); return }
 }
 
-func TestUtilAssignValue(t *testing.T) {
-}
-
-func TestUtilCopyFields(t *testing.T) {
+func TestUtilRoughAssign(t *testing.T) {
         {
                 s1 := &struct {
                         A int
@@ -94,18 +134,45 @@ func TestUtilCopyFields(t *testing.T) {
                 s2.S.B = "foo"
                 s2.S.C = "true"
 
-                //err := CopyFields(s1, s2)
                 err := RoughAssign(s1, s2)
-                if err != nil { t.Errorf("CopyFields: %v", err); return }
-                if s1.A != 1 { t.Errorf("CopyFields:A: %v", s1); return }
-                if s1.B != 0.1 { t.Errorf("CopyFields:B: %v", s1); return }
-                if s1.C != "foo" { t.Errorf("CopyFields:C: %v", s1); return }
-                if s1.D != true { t.Errorf("CopyFields:D: %v", s1); return }
-                if s1.E != "foo" { t.Errorf("CopyFields:E: %v", s1); return }
-                if s1.S.A != 100 { t.Errorf("CopyFields:S.A: %v", s1); return }
-                if s1.S.B != "foo" { t.Errorf("CopyFields:S.B: %v", s1); return }
-                if s1.S.C != true { t.Errorf("CopyFields:S.C: %v", s1); return }
-                if s1.S.Z != "foobar" { t.Errorf("CopyFields:S.Z: %v", s1); return }
-                if s1.Z != 1000 { t.Errorf("CopyFields:Z: %v", s1); return }
+                if err != nil { t.Errorf("RoughAssign: %v", err); return }
+                if s1.A != 1 { t.Errorf("RoughAssign:A: %v", s1); return }
+                if s1.B != 0.1 { t.Errorf("RoughAssign:B: %v", s1); return }
+                if s1.C != "foo" { t.Errorf("RoughAssign:C: %v", s1); return }
+                if s1.D != true { t.Errorf("RoughAssign:D: %v", s1); return }
+                if s1.E != "foo" { t.Errorf("RoughAssign:E: %v", s1); return }
+                if s1.S.A != 100 { t.Errorf("RoughAssign:S.A: %v", s1); return }
+                if s1.S.B != "foo" { t.Errorf("RoughAssign:S.B: %v", s1); return }
+                if s1.S.C != true { t.Errorf("RoughAssign:S.C: %v", s1); return }
+                if s1.S.Z != "foobar" { t.Errorf("RoughAssign:S.Z: %v", s1); return }
+                if s1.Z != 1000 { t.Errorf("RoughAssign:Z: %v", s1); return }
+        }
+        {
+                s0 := &struct {
+                        A struct {
+                                Aa struct{ Aaa int }
+                        }
+                }{}
+
+                s1 := &struct {
+                        A struct {
+                                Aa [1]struct{ Aaa int }
+                        }
+                }{}
+
+                s2 := &struct {
+                        A [1]struct{
+                                Aa [1]struct { Aaa string }
+                        }
+                }{}
+                s2.A[0].Aa[0].Aaa = "11"
+
+                err := RoughAssign(s0, s2)
+                if err != nil { t.Errorf("RoughAssign: %v", err); return }
+                if s0.A.Aa.Aaa != 11 { t.Errorf("RoughAssign: %v", s0); return }
+
+                err = RoughAssign(s1, s2)
+                if err != nil { t.Errorf("RoughAssign: %v", err); return }
+                if s1.A.Aa[0].Aaa != 11 { t.Errorf("RoughAssign: %v", s1); return }
         }
 }
