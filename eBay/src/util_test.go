@@ -94,7 +94,8 @@ func TestUtilCopyFields(t *testing.T) {
                 s2.S.B = "foo"
                 s2.S.C = "true"
 
-                err := CopyFields(s1, s2)
+                //err := CopyFields(s1, s2)
+                err := RoughAssign(s1, s2)
                 if err != nil { t.Errorf("CopyFields: %v", err); return }
                 if s1.A != 1 { t.Errorf("CopyFields:A: %v", s1); return }
                 if s1.B != 0.1 { t.Errorf("CopyFields:B: %v", s1); return }
@@ -102,7 +103,7 @@ func TestUtilCopyFields(t *testing.T) {
                 if s1.D != true { t.Errorf("CopyFields:D: %v", s1); return }
                 if s1.E != "foo" { t.Errorf("CopyFields:E: %v", s1); return }
                 if s1.S.A != 100 { t.Errorf("CopyFields:S.A: %v", s1); return }
-                if s1.S.B != "bar" { t.Errorf("CopyFields:S.B: %v", s1); return }
+                if s1.S.B != "foo" { t.Errorf("CopyFields:S.B: %v", s1); return }
                 if s1.S.C != true { t.Errorf("CopyFields:S.C: %v", s1); return }
                 if s1.S.Z != "foobar" { t.Errorf("CopyFields:S.Z: %v", s1); return }
                 if s1.Z != 1000 { t.Errorf("CopyFields:Z: %v", s1); return }

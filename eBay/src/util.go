@@ -124,10 +124,26 @@ func ConvertValue(k reflect.Kind, v reflect.Value) (ov reflect.Value) {
         return
 }
 
-func AssignValue(lhs, rhs reflect.Value) (err os.Error) {
+func RoughAssignValue(lhs, rhs reflect.Value) (err os.Error) {
+        if p, ok := lhs.(*reflect.PtrValue); ok { lhs = p.Elem(); }
+        if p, ok := rhs.(*reflect.PtrValue); ok { rhs = p.Elem(); }
+
         switch lv := lhs.(type) {
         case *reflect.StructValue:
-                err = CopyFields(lhs.Interface(), rhs.Interface())
+                //fmt.Printf("assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
+                if rv, ok := rhs.(*reflect.StructValue); ok {
+                        lt := lv.Type().(*reflect.StructType)
+                        //rt := rv.Type().(*reflect.StructType)
+                        for i := 0; i < lt.NumField(); i += 1 {
+                                ft := lt.Field(i)
+                                fv := lv.FieldByIndex(ft.Index)
+                                if v := rv.FieldByName(ft.Name); v != nil {
+                                        err = RoughAssignValue(fv, v)
+                                }
+                        }
+                } else {
+                        err = os.NewError("rhs is not *reflect.StructValue")
+                }
         //case *reflect.SliceValue:
         //case *reflect.ArrayValue:
         default:
@@ -140,30 +156,6 @@ func AssignValue(lhs, rhs reflect.Value) (err os.Error) {
         return
 }
 
-func CopyFields(lhs, rhs interface{}) (err os.Error) {
-        if lhs == nil { err = os.NewError("lhs is nil"); return }
-        if rhs == nil { err = os.NewError("rhs is nil"); return }
-
-        var rv *reflect.StructValue
-        switch v := reflect.NewValue(rhs).(type) {
-        case *reflect.StructValue: rv = v
-        case *reflect.PtrValue:
-                if r, ok := v.Elem().(*reflect.StructValue); ok { rv = r }
-        default:
-                err = os.NewError("rhs is not *reflect.StructValue")
-                return
-        }
-
-        rt := rv.Type().(*reflect.StructType)
-
-        ForEachField(lhs, func(t *reflect.StructField, v reflect.Value)(nxt bool) {
-                var ft reflect.StructField
-                if t, ok := rt.FieldByName(t.Name); ok { ft = t } else { return true }
-
-                fv := rv.FieldByIndex(ft.Index)
-
-                err = AssignValue(v, fv)
-                return true
-        })
-        return
+func RoughAssign(lhs, rhs interface{}) (err os.Error) {
+        return RoughAssignValue(reflect.NewValue(lhs), reflect.NewValue(rhs))
 }

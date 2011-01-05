@@ -319,7 +319,7 @@ func noJSON(r *findItemsJSONResponse) (res *findItemsResponse) {
 
         for n, i := range r.SearchResult[0].Item {
                 res.SearchResult.Item[n] = Item{}
-                CopyFields(&(res.SearchResult.Item[n]), &i)
+                RoughAssign(&(res.SearchResult.Item[n]), &i)
         }
 
         /*
