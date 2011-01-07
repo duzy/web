@@ -7,7 +7,7 @@ import (
         "xml"
         "json"
         "bytes"
-        "strconv"
+        //"strconv"
         "strings"
         "reflect"
 )
@@ -373,36 +373,9 @@ func (svc *FindingService) parseJSONResponse(str string) (res *findItemsResponse
         return
 }
 
- func stoi(s string) (i int) { i, _ = strconv.Atoi(s); return }
- func stof(s string) (f float) { f, _ = strconv.Atof(s); return }
- func stob(s string) (b bool) { b, _ = strconv.Atob(s); return }
 func noJSON(r *findItemsResponseJSON) (res *findItemsResponse, err os.Error) {
-        res = &findItemsResponse{
-        Ack: r.Ack[0],
-        Version: r.Version[0],
-        Timestamp: r.Timestamp[0],
-        //SearchResult: { make([]Item, len(r.SearchResult[0].Item)) },
-        ItemSearchURL: r.ItemSearchURL[0],
-        PaginationOutput: PaginationOutput{
-                PageNumber: stoi(r.PaginationOutput[0].PageNumber[0]),
-                EntriesPerPage: stoi(r.PaginationOutput[0].EntriesPerPage[0]),
-                TotalPages: stoi(r.PaginationOutput[0].TotalPages[0]),
-                TotalEntries: stoi(r.PaginationOutput[0].TotalEntries[0]),
-                },
-        }
-
-        res.SearchResult.Item = make([]Item, len(r.SearchResult[0].Item))
-
-        for n, i := range r.SearchResult[0].Item {
-                res.SearchResult.Item[n] = Item{}
-                err = RoughAssign(&(res.SearchResult.Item[n]), &i)
-        }
-        /*
-         */
-
-        /* // TODO use this
         res = &findItemsResponse{}
+        res.SearchResult.Item = make([]Item, len(r.SearchResult[0].Item))
         err = RoughAssign(res, r)
-         */
         return
 }

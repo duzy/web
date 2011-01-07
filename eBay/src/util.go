@@ -155,17 +155,16 @@ func RoughAssignValue(lhs, rhs reflect.Value) (err os.Error) {
                 if rv, ok := rhs.(reflect.ArrayOrSliceValue); ok {
                         //lv = reflect.MakeSlice(lv.Type().(*reflect.SliceType), rv.Len(), rv.Len())
                         for i := 0 ; i < lv.Len() && i < rv.Len(); i += 1 {
-                                err = RoughAssign(lv.Elem(i), rv.Elem(i))
+                                err = RoughAssignValue(lv.Elem(i), rv.Elem(i))
                         }
                 } else {
                         //lv = reflect.MakeSlice(lv.Type().(*reflect.SliceType), 1, 1)
-                        if 0 < lv.Len() && 0 < rv.Len() {
-                                err = RoughAssign(lv.Elem(0), rv.Elem(0))
+                        if 0 < lv.Len() {
+                                err = RoughAssignValue(lv.Elem(0), rv)
                         }
                 }
         default:
                 if v := ConvertValue(lhs.Type().Kind(), rhs); v != nil {
-                        fmt.Printf("assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
                         lhs.SetValue(v)
                 } else {
                         fmt.Printf("todo: assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
@@ -175,18 +174,18 @@ func RoughAssignValue(lhs, rhs reflect.Value) (err os.Error) {
 }
 
 func RoughAssign(lhs, rhs interface{}) (err os.Error) {
-        /*
         defer func() {
                 if r := recover(); r != nil {
-                        if e, ok := r.(os.Error); ok {
+                        switch e := r.(type) {
+                        case os.Error:
                                 err = e
-                        //} else if _, ok := r.(runtime.Error); ok {
-                        } else {
+                        case string:
+                                err = os.NewError(e)
+                        default:
                                 panic(r)
                         }
                 }
         }()
-         */
 
         lv, rv := reflect.NewValue(lhs), reflect.NewValue(rhs)
         return RoughAssignValue(lv, rv)
