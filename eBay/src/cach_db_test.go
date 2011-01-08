@@ -15,7 +15,11 @@ func TestCacheCategory(t *testing.T) {
 
         cat := &Category{
         CategoryID: "123456",
+        CategoryLevel: 5,
         CategoryName: fmt.Sprintf("test category: %v", time.Nanoseconds()),
+        CategoryParentID: "<none>",
+        AutoPayEnabled: true,
+        BestOfferEnabled: true,
         }
         err = c.CacheCategory(cat)
         if err != nil { t.Errorf("c.CacheCategory: %v", err); return }
@@ -24,7 +28,10 @@ func TestCacheCategory(t *testing.T) {
         if err != nil { t.Errorf("c.GetCategory(%s): %v", cat.CategoryID, err); return }
         if cat2 == nil { t.Errorf("c.GetCategory(%s): no category returned", cat.CategoryID); return }
         if cat.CategoryID != cat2.CategoryID { t.Errorf("wrong category: %v != %v", cat, cat2); return }
-        if cat.CategoryName != cat2.CategoryName { t.Errorf("wrong category: %v != %v", cat, cat2); return }
+        if cat.CategoryLevel != cat2.CategoryLevel { t.Errorf("wrong category: %v != %v", cat, cat2); return }
+        if cat.CategoryParentID != cat2.CategoryParentID { t.Errorf("wrong category: %v != %v", cat, cat2); return }
+        if cat.AutoPayEnabled != cat2.AutoPayEnabled { t.Errorf("wrong category: %v != %v", cat, cat2); return }
+        if cat.BestOfferEnabled != cat2.BestOfferEnabled { t.Errorf("wrong category: %v != %v", cat, cat2); return }
 }
 
 func TestCacheItem(t *testing.T) {
@@ -92,7 +99,11 @@ func TestCacheItem(t *testing.T) {
 
         item2, err := c.GetItem(item.ItemId)
         if err != nil { t.Errorf("c.GetItem(%s): %v", item.ItemId, err); return }
-        if item.ItemId != item2.ItemId { t.Errorf("c.GetItem: not equal: %v != %v", item, item2); return }
+        if item.ItemId != item2.ItemId {
+                t.Error("c.GetItem: not equal")
+                t.Errorf("c.GetItem: %v", item)
+                t.Errorf("c.GetItem: %v", item2)
+        }
         if !reflect.DeepEqual(item, item2) {
                 t.Error("c.GetItem: not equal")
                 t.Errorf("c.GetItem: %v", item)

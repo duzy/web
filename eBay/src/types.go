@@ -38,33 +38,33 @@ type PaginationOutput struct {
 }
 
 type Money struct {
-        CurrencyId string "attr" // USD, EUR, etc...
         Amount float "chardata"
+        CurrencyId string "attr" // USD, EUR, etc...
 }
 
 type ShippingInfo struct {
         ShippingServiceCost Money
         ShippingType string // Flat, Air ...
         ShipToLocations string
+        HandlingTime int // The number of days it will take the seller to ship this item
         ExpeditedShipping bool
         OneDayShippingAvailable bool
-        HandlingTime int // The number of days it will take the seller to ship this item
 }
 
 type SellingStatus struct {
         CurrentPrice Money
         ConvertedCurrentPrice Money
-        BidCount int
         SellingState string
         TimeLeft string
+        BidCount int
 }
 
 type ListingInfo struct {
-        BestOfferEnabled bool
-        BuyItNowAvailable bool
         StartTime string
         EndTime string
         ListingType string
+        BestOfferEnabled bool
+        BuyItNowAvailable bool
         Gift bool
 }
 
@@ -78,9 +78,12 @@ type Category struct {
         CategoryLevel int
         CategoryName string
         CategoryParentID string
+        AutoPayEnabled bool
+        BestOfferEnabled bool
 }
 
 type Item struct {
+        // NOTE: Do NOT change the order, order must the same as cach_db SQLs
         ItemId string
         Title string
         GlobalId string
@@ -90,13 +93,13 @@ type Item struct {
         ViewItemURL string
         ProductId string
         PaymentMethod string
-        AutoPay bool
         Location string
         Country string
+        Condition Condition
         ShippingInfo ShippingInfo
         SellingStatus SellingStatus
         ListingInfo ListingInfo
         ReturnsAccepted bool
-        Condition Condition
+        AutoPay bool
 }
 

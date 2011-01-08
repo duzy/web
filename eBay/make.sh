@@ -13,7 +13,7 @@ fi
 
 . ../funs.sh
 
-#go_tests=`ls src/[acstu]*_test.go`
+#go_tests=`ls src/util_test.go`
 go_tests=`ls src/*_test.go`
 go_files="
   src/urls.go
@@ -28,3 +28,12 @@ go_files="
 
 name=eBay
 build_pack $name && build_testmain $name
+
+# tools/sync
+go_tests=""
+go_files="
+  tools/sync/main.go
+"
+build_exe sync
+
+exit 0

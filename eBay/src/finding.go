@@ -12,6 +12,7 @@ import (
         "reflect"
 )
 
+// TODO: get rid of this type
 type findItemsResponse struct {
         Ack string
         Version string
@@ -21,6 +22,7 @@ type findItemsResponse struct {
         PaginationOutput PaginationOutput
 }
 
+// TODO: get rid of this type
 type findItemsResponseJSON struct {
         Ack []string
         Version []string

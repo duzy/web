@@ -4,9 +4,28 @@ import (
         "os"
         "fmt"
         "strconv"
+        "strings"
         "reflect"
         //"runtime"
+        "./_obj/web"
 )
+
+type NamedValue struct {
+        Name string
+        Value interface{}
+}
+
+func GetValues(a []NamedValue) (res []interface{}) {
+        if a == nil {
+                return
+        }
+
+        res = make([]interface{}, len(a))
+        for i, v := range a {
+                res[i] = v.Value
+        }
+        return
+}
 
 // AssignFields assign left-hand-side fields to right-hand-side fields of
 // same names.
@@ -111,9 +130,12 @@ func ConvertValue(k reflect.Kind, v reflect.Value) (ov reflect.Value) {
 
         if k == v.Type().Kind() { ov = v; return }
 
-        s := v.Interface().(string) // TODO: arbitray type
+        //s := v.Interface().(string) // TODO: arbitray type
+        s := fmt.Sprintf("%v", v.Interface())
         switch k {
-        case reflect.Bool:      if o, e := strconv.Atob(s); e == nil { ov = reflect.NewValue(o) }
+        case reflect.Bool:      if o, e := strconv.Atob(s); e == nil { ov = reflect.NewValue(o)
+                } else if s == "0" { ov = reflect.NewValue(false)
+                } else if s == "1" { ov = reflect.NewValue(true) }
         case reflect.Int:       if o, e := strconv.Atoi(s); e == nil { ov = reflect.NewValue(o) }
         case reflect.Float:     if o, e := strconv.Atof(s); e == nil { ov = reflect.NewValue(o) }
         case reflect.String:    ov = reflect.NewValue(s)
@@ -165,6 +187,7 @@ func RoughAssignValue(lhs, rhs reflect.Value) (err os.Error) {
                 }
         default:
                 if v := ConvertValue(lhs.Type().Kind(), rhs); v != nil {
+                        //fmt.Printf("assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
                         lhs.SetValue(v)
                 } else {
                         fmt.Printf("todo: assign: (%s) = (%s) %v\n", lhs.Type().Kind(), rhs.Type().Kind(), rhs.Interface())
@@ -190,3 +213,135 @@ func RoughAssign(lhs, rhs interface{}) (err os.Error) {
         lv, rv := reflect.NewValue(lhs), reflect.NewValue(rhs)
         return RoughAssignValue(lv, rv)
 }
+
+func FieldsToArray(s interface{}) (a []NamedValue, err os.Error) {
+        return fieldsToArray(s, false)
+}
+
+func FieldsToArrayFlat(s interface{}) (a []NamedValue, err os.Error) {
+        return fieldsToArray(s, true)
+}
+
+func fieldsToArray(s interface{}, flat bool) (a []NamedValue, err os.Error) {
+        v := reflect.NewValue(s)
+        if p, ok := v.(*reflect.PtrValue); ok { v = p.Elem() }
+
+        sv, ok := v.(*reflect.StructValue)
+        if !ok {
+                err = os.NewError("not a *StructValue")
+                return
+        }
+        
+        st := sv.Type().(*reflect.StructType)
+        if flat {
+                a = make([]NamedValue, 0, 2*st.NumField())
+                for i := 0; i < st.NumField(); i += 1 {
+                        ft := st.Field(i)
+                        fv := sv.Field(i) //FieldByIndex(ft.Index)
+                        if fsv, ok := fv.(*reflect.StructValue); ok {
+                                fa, err := fieldsToArray(fsv.Interface(), true)
+                                if err != nil { return }
+
+                                for i := 0; i < len(fa); i += 1 {
+                                        fa[i].Name = ft.Name + "." + fa[i].Name
+                                }
+
+                                //fmt.Printf("struct: %s = %v\n", ft.Name, fa) //fv.Interface())
+                                a = append(a, fa...)
+                        } else {
+                                a = append(a, NamedValue{ ft.Name, fv.Interface() })
+                        }
+                }
+                //fmt.Printf("%v\n", a);
+        } else {
+                a = make([]NamedValue, st.NumField())
+                for i := 0; i < st.NumField(); i += 1 {
+                        ft := st.Field(i)
+                        fv := sv.Field(i)
+                        a[i] = NamedValue{ ft.Name, fv.Interface() }
+                }
+        }
+
+        return
+}
+
+func RoughAssignQueryResult(iv interface {}, qr web.QueryResult) (err os.Error) {
+        v := reflect.NewValue(iv)
+        if p, ok := v.(*reflect.PtrValue); ok {
+                v = p.Elem()
+        } else {
+                err = os.NewError("RoughAssignQueryResult: can't assign QueryResult to non ptr value")
+                return
+        }
+
+        if sv, ok := v.(*reflect.StructValue); ok {
+                count := int(qr.GetFieldCount())
+                if count <= 0 {
+                        os.NewError("RoughAssignQueryResult: no fields in QueryResult")
+                        return
+                }
+
+                names := make([]string, count)
+                for i := 0; i < count; i += 1 {
+                        names[i] = qr.GetFieldName(i)
+                }
+
+                var row []interface{}
+                row, err = qr.FetchRow()
+                if err != nil { return }
+                if row == nil {
+                        err = os.NewError("RoughAssignQueryResult: no rows in QueryResult")
+                        return
+                }
+
+                err = roughAssignQueryResultRow(sv, names, row)
+        } else {
+                err = os.NewError("RoughAssignQueryResult: can't assign QueryResult to non struct value")
+        }
+
+        return
+}
+
+func roughAssignQueryResultRow(sv *reflect.StructValue, names []string, row []interface{}) (err os.Error) {
+        for i := 0; i < len(names); i += 1 {
+                //fmt.Printf("field: [%d] %v\n", i, names[i])
+                name := names[i]
+
+                fsv := sv
+                for {
+                        if p := strings.Index(name, "$"); 0 < p {
+                                fv := fsv.FieldByName(name[0:p])
+                                if fv == nil {
+                                        err = os.NewError("RoughAssignQueryResult: no field by name '"+name[0:p]+"'")
+                                        return // or 'continue' to ignore this?
+                                }
+
+                                if v, ok := fv.(*reflect.StructValue); ok {
+                                        fsv = v
+                                        name = name[p+1:len(name)]
+                                } else {
+                                        err = os.NewError("RoughAssignQueryResult: field is not struct value")
+                                        return
+                                }
+                        } else { break }
+                }//for
+
+                fv := fsv.FieldByName(name)
+                if fv == nil {
+                        err = os.NewError(fmt.Sprintf("RoughAssignQueryResult: no filed by name '%s'", names[i]))
+                        return
+                }
+
+                //fmt.Printf("assign: %v, %v\n", names[i], row[i])
+                err = RoughAssignValue(fv, reflect.NewValue(row[i]))
+                if err != nil {
+                        return
+                }
+                /*
+                 */
+        next:
+        }
+        //fmt.Printf("%v\n", iv)
+        return
+}
+

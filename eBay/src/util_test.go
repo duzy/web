@@ -3,7 +3,7 @@ package eBay
 import (
         "testing"
         "reflect"
-        //"fmt"
+        "fmt"
 )
 
 func TestUtilMapFields(t *testing.T) {
@@ -174,5 +174,70 @@ func TestUtilRoughAssign(t *testing.T) {
                 err = RoughAssign(s1, s2)
                 if err != nil { t.Errorf("RoughAssign: %v", err); return }
                 if s1.A.Aa[0].Aaa != 11 { t.Errorf("RoughAssign: %v", s1); return }
+        }
+}
+
+func TestUtilFieldsToArray(t *testing.T) {
+        s := &struct{
+                A int
+                B string
+                C struct{
+                        C1 string
+                        C2 bool
+                        C3 struct {
+                                C3_a string
+                                C3_b string
+                        }
+                }
+        }{}
+
+        s.A = 100
+        s.B = "foo"
+        s.C.C1 = "foo"
+        s.C.C2 = true
+        s.C.C3.C3_a = "foo"
+        s.C.C3.C3_b = "foo"
+        
+        {
+                a, err := FieldsToArray(s)
+                if err != nil {
+                        t.Errorf("FieldsToArrayFlat: %v", err)
+                        return
+                }
+
+                //fmt.Printf("%v\n", a)
+                if a[0].Name != "A" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[1].Name != "B" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[2].Name != "C" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+
+                if a[0].Value != 100 { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[1].Value != "foo" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if fmt.Sprint(a[2].Value) != "{foo true {foo foo}}" {
+                        t.Errorf("FieldsToArrayFlat: %v", fmt.Sprint(a[2].Value));
+                        return
+                }
+        }
+
+        {
+                a, err := FieldsToArrayFlat(s)
+                if err != nil {
+                        t.Errorf("FieldsToArrayFlat: %v", err)
+                        return
+                }
+
+                //fmt.Printf("%v\n", a)
+                if a[0].Name != "A" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[1].Name != "B" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[2].Name != "C.C1" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[3].Name != "C.C2" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[4].Name != "C.C3.C3_a" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[5].Name != "C.C3.C3_b" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+
+                if a[0].Value != 100 { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[1].Value != "foo" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[2].Value != "foo" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[3].Value != true { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[4].Value != "foo" { t.Errorf("FieldsToArrayFlat: %v", a); return }
+                if a[5].Value != "foo" { t.Errorf("FieldsToArrayFlat: %v", a); return }
         }
 }
