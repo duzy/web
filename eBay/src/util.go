@@ -304,7 +304,6 @@ func RoughAssignQueryResult(iv interface {}, qr web.QueryResult) (err os.Error) 
 
 func roughAssignQueryResultRow(sv *reflect.StructValue, names []string, row []interface{}) (err os.Error) {
         for i := 0; i < len(names); i += 1 {
-                //fmt.Printf("field: [%d] %v\n", i, names[i])
                 name := names[i]
 
                 fsv := sv
@@ -317,8 +316,8 @@ func roughAssignQueryResultRow(sv *reflect.StructValue, names []string, row []in
                                 }
 
                                 if v, ok := fv.(*reflect.StructValue); ok {
-                                        fsv = v
                                         name = name[p+1:len(name)]
+                                        fsv = v
                                 } else {
                                         err = os.NewError("RoughAssignQueryResult: field is not struct value")
                                         return
@@ -332,14 +331,10 @@ func roughAssignQueryResultRow(sv *reflect.StructValue, names []string, row []in
                         return
                 }
 
-                //fmt.Printf("assign: %v, %v\n", names[i], row[i])
                 err = RoughAssignValue(fv, reflect.NewValue(row[i]))
                 if err != nil {
                         return
                 }
-                /*
-                 */
-        next:
         }
         //fmt.Printf("%v\n", iv)
         return

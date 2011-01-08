@@ -27,13 +27,14 @@ INSERT INTO table_eBay_cache_categories(
   CategoryParentID,
   AutoPayEnabled,
   BestOfferEnabled
-) VALUES(?,?,?,?,?,?)
-  ON DUPLICATE KEY UPDATE
-    CategoryLevel=VALUES(CategoryLevel),
-    CategoryName=VALUES(CategoryName),
-    CategoryParentID=VALUES(CategoryParentID),
-    AutoPayEnabled=VALUES(AutoPayEnabled),
-    BestOfferEnabled=VALUES(BestOfferEnabled)
+)
+VALUES(?,?,?,?,?,?)
+ON DUPLICATE KEY UPDATE
+  CategoryLevel=VALUES(CategoryLevel),
+  CategoryName=VALUES(CategoryName),
+  CategoryParentID=VALUES(CategoryParentID),
+  AutoPayEnabled=VALUES(AutoPayEnabled),
+  BestOfferEnabled=VALUES(BestOfferEnabled)
 `
         SQL_SELECT_CACHE_CATEGORY_ROW = `
 SELECT
@@ -124,43 +125,44 @@ INSERT INTO table_eBay_cache_items(
   ListingInfo$Gift,
   ReturnsAccepted,
   AutoPay
-) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-  ON DUPLICATE KEY UPDATE 
-    Title=VALUES(Title),
-    GlobalId=VALUES(GlobalId),
-    PrimaryCategory$CategoryID=VALUES(PrimaryCategory$CategoryID),
-    PrimaryCategory$CategoryName=VALUES(PrimaryCategory$CategoryName),
-    GalleryURL=VALUES(GalleryURL),
-    GalleryPlusPictureURL=VALUES(GalleryPlusPictureURL),
-    ViewItemURL=VALUES(ViewItemURL),
-    ProductId=VALUES(ProductId),
-    PaymentMethod=VALUES(PaymentMethod),
-    Location=VALUES(Location),
-    Country=VALUES(Country),
-    Condition$ConditionId=VALUES(Condition$ConditionId),
-    Condition$ConditionDisplayName=VALUES(Condition$ConditionDisplayName),
-    ShippingInfo$ShippingServiceCost$Amount=VALUES(ShippingInfo$ShippingServiceCost$Amount),
-    ShippingInfo$ShippingServiceCost$CurrencyId=VALUES(ShippingInfo$ShippingServiceCost$CurrencyId),
-    ShippingInfo$ShippingType=VALUES(ShippingInfo$ShippingType),
-    ShippingInfo$ShipToLocations=VALUES(ShippingInfo$ShipToLocations),
-    ShippingInfo$HandlingTime=VALUES(ShippingInfo$HandlingTime),
-    ShippingInfo$ExpeditedShipping=VALUES(ShippingInfo$ExpeditedShipping),
-    ShippingInfo$OneDayShippingAvailable=VALUES(ShippingInfo$OneDayShippingAvailable),
-    SellingStatus$CurrentPrice$Amount=VALUES(SellingStatus$CurrentPrice$Amount),
-    SellingStatus$CurrentPrice$CurrencyId=VALUES(SellingStatus$CurrentPrice$CurrencyId),
-    SellingStatus$ConvertedCurrentPrice$Amount=VALUES(SellingStatus$ConvertedCurrentPrice$Amount),
-    SellingStatus$ConvertedCurrentPrice$CurrencyId=VALUES(SellingStatus$ConvertedCurrentPrice$CurrencyId),
-    SellingStatus$BidCount=VALUES(SellingStatus$BidCount),
-    SellingStatus$SellingState=VALUES(SellingStatus$SellingState),
-    SellingStatus$TimeLeft=VALUES(SellingStatus$TimeLeft),
-    ListingInfo$StartTime=VALUES(ListingInfo$StartTime),
-    ListingInfo$EndTime=VALUES(ListingInfo$EndTime),
-    ListingInfo$ListingType=VALUES(ListingInfo$ListingType),
-    ListingInfo$BestOfferEnabled=VALUES(ListingInfo$BestOfferEnabled),
-    ListingInfo$BuyItNowAvailable=VALUES(ListingInfo$BuyItNowAvailable),
-    ListingInfo$Gift=VALUES(ListingInfo$Gift),
-    ReturnsAccepted=VALUES(ReturnsAccepted),
-    AutoPay=VALUES(AutoPay)
+)
+VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+ON DUPLICATE KEY UPDATE 
+  Title=VALUES(Title),
+  GlobalId=VALUES(GlobalId),
+  PrimaryCategory$CategoryID=VALUES(PrimaryCategory$CategoryID),
+  PrimaryCategory$CategoryName=VALUES(PrimaryCategory$CategoryName),
+  GalleryURL=VALUES(GalleryURL),
+  GalleryPlusPictureURL=VALUES(GalleryPlusPictureURL),
+  ViewItemURL=VALUES(ViewItemURL),
+  ProductId=VALUES(ProductId),
+  PaymentMethod=VALUES(PaymentMethod),
+  Location=VALUES(Location),
+  Country=VALUES(Country),
+  Condition$ConditionId=VALUES(Condition$ConditionId),
+  Condition$ConditionDisplayName=VALUES(Condition$ConditionDisplayName),
+  ShippingInfo$ShippingServiceCost$Amount=VALUES(ShippingInfo$ShippingServiceCost$Amount),
+  ShippingInfo$ShippingServiceCost$CurrencyId=VALUES(ShippingInfo$ShippingServiceCost$CurrencyId),
+  ShippingInfo$ShippingType=VALUES(ShippingInfo$ShippingType),
+  ShippingInfo$ShipToLocations=VALUES(ShippingInfo$ShipToLocations),
+  ShippingInfo$HandlingTime=VALUES(ShippingInfo$HandlingTime),
+  ShippingInfo$ExpeditedShipping=VALUES(ShippingInfo$ExpeditedShipping),
+  ShippingInfo$OneDayShippingAvailable=VALUES(ShippingInfo$OneDayShippingAvailable),
+  SellingStatus$CurrentPrice$Amount=VALUES(SellingStatus$CurrentPrice$Amount),
+  SellingStatus$CurrentPrice$CurrencyId=VALUES(SellingStatus$CurrentPrice$CurrencyId),
+  SellingStatus$ConvertedCurrentPrice$Amount=VALUES(SellingStatus$ConvertedCurrentPrice$Amount),
+  SellingStatus$ConvertedCurrentPrice$CurrencyId=VALUES(SellingStatus$ConvertedCurrentPrice$CurrencyId),
+  SellingStatus$BidCount=VALUES(SellingStatus$BidCount),
+  SellingStatus$SellingState=VALUES(SellingStatus$SellingState),
+  SellingStatus$TimeLeft=VALUES(SellingStatus$TimeLeft),
+  ListingInfo$StartTime=VALUES(ListingInfo$StartTime),
+  ListingInfo$EndTime=VALUES(ListingInfo$EndTime),
+  ListingInfo$ListingType=VALUES(ListingInfo$ListingType),
+  ListingInfo$BestOfferEnabled=VALUES(ListingInfo$BestOfferEnabled),
+  ListingInfo$BuyItNowAvailable=VALUES(ListingInfo$BuyItNowAvailable),
+  ListingInfo$Gift=VALUES(ListingInfo$Gift),
+  ReturnsAccepted=VALUES(ReturnsAccepted),
+  AutoPay=VALUES(AutoPay)
 `
         SQL_SELECT_CACHE_ITEM_ROW = `
 SELECT
@@ -199,41 +201,14 @@ SELECT
   ListingInfo$Gift,
   ReturnsAccepted,
   AutoPay
-  FROM table_eBay_cache_items
-  WHERE itemId=? LIMIT 1
+FROM table_eBay_cache_items
+WHERE itemId=? LIMIT 1
 `
 )
 
 type dbCache struct {
         db web.Database
 }
-
-func _2string(v interface{}) string { return fmt.Sprintf("%v",v) }
-func _2int(v interface{}) (r int) {
-        switch i := v.(type) {
-        //case float: int(i)
-        case string: fmt.Sscanf(i, "%d", &r)
-        case int: r = i
-        }
-        return
-}
-func _2float(v interface{}) (r float) {
-        switch f := v.(type) {
-        case float: r = f
-        case float32: r = float(f)
-        case string: fmt.Sscanf(f, "%f", &r)
-        }
-        return
-}
-func _2bool(v interface{}) (r bool) {
-        switch b := v.(type) {
-        case bool: r = b
-        case int: if b != 0 { r = true }
-        case string: if b == "true" { r = true }
-        }
-        return
-}
-func _bool2int(v bool) (n int) { if v { n = 1 } else { n = 0 }; return }
 
 // NewDBCache accepts parameters in this fixed order:
 //      host, user, password, database
@@ -335,50 +310,6 @@ func (c *dbCache) CacheCategory(cat *Category) (err os.Error) {
 }
 
 func (c *dbCache) CacheItem(i *Item) (err os.Error) {
-        /*
-        res, err := c.exec(SQL_INSERT_CACHE_ITEM_ROW,
-                i.ItemId,
-                i.Title,
-                i.GlobalId,
-                i.PrimaryCategory.CategoryID,
-                i.PrimaryCategory.CategoryName,
-                i.GalleryURL,
-                i.GalleryPlusPictureURL,
-                i.ViewItemURL,
-                i.ProductId,
-                i.PaymentMethod,
-                i.Location,
-                i.Country,
-                i.Condition.ConditionId,
-                i.Condition.ConditionDisplayName,
-                i.ShippingInfo.ShippingServiceCost.Amount,
-                i.ShippingInfo.ShippingServiceCost.CurrencyId,
-                i.ShippingInfo.ShippingType,
-                i.ShippingInfo.ShipToLocations,
-                i.ShippingInfo.HandlingTime,
-                _bool2int(i.ShippingInfo.ExpeditedShipping),
-                _bool2int(i.ShippingInfo.OneDayShippingAvailable),
-                i.SellingStatus.CurrentPrice.Amount,
-                i.SellingStatus.CurrentPrice.CurrencyId,
-                i.SellingStatus.ConvertedCurrentPrice.Amount,
-                i.SellingStatus.ConvertedCurrentPrice.CurrencyId,
-                i.SellingStatus.BidCount,
-                i.SellingStatus.SellingState,
-                i.SellingStatus.TimeLeft,
-                i.ListingInfo.StartTime,
-                i.ListingInfo.EndTime,
-                i.ListingInfo.ListingType,
-                _bool2int(i.ListingInfo.BestOfferEnabled),
-                _bool2int(i.ListingInfo.BuyItNowAvailable),
-                _bool2int(i.ListingInfo.Gift),
-                _bool2int(i.ReturnsAccepted),
-                _bool2int(i.AutoPay) )
-        if err != nil { return }
-        */
-        // if res.GetAffectedRows() == 0 /*!= 1*/ {
-        //         //err = os.NewError(fmt.Sprintf("%d rows affected", res.GetAffectedRows()))
-        // }
-
         named, err := FieldsToArrayFlat(i)
         if err != nil { return }
 
