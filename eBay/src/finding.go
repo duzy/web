@@ -13,16 +13,6 @@ import (
 )
 
 // TODO: get rid of this type
-type findItemsResponse struct {
-        Ack string
-        Version string
-        Timestamp string
-        SearchResult struct { Item []Item }
-        ItemSearchURL string
-        PaginationOutput PaginationOutput
-}
-
-// TODO: get rid of this type
 type findItemsResponseJSON struct {
         Ack []string
         Version []string
@@ -265,7 +255,7 @@ func (svc *FindingService) NewFindItemsByKeywordsCall() (call *eBayFindingServic
 func (svc *FindingService) NewFindItemsAdvancedCall() (call *eBayFindingService_FindItemsAdvanced)      { return &eBayFindingService_FindItemsAdvanced{} }
 
 // ParseResponse parse text response of an eBay operation.
-func (svc *FindingService) ParseResponse(str string) (res *findItemsResponse, err os.Error) {
+func (svc *FindingService) ParseResponse(str string) (res *FindItemsResponse, err os.Error) {
         switch svc.app.ResponseFormat {
         case "JSON":
                 res, err = svc.parseJSONResponse(str)
@@ -278,7 +268,7 @@ func (svc *FindingService) ParseResponse(str string) (res *findItemsResponse, er
 }
 
 // parseXMLResponse parse XML format response
-func (svc *FindingService) parseXMLResponse(str string) (res *findItemsResponse, err os.Error) {
+func (svc *FindingService) parseXMLResponse(str string) (res *FindItemsResponse, err os.Error) {
         p := xml.NewParser(bytes.NewBufferString(str))
 
         var start *xml.StartElement
@@ -296,34 +286,34 @@ func (svc *FindingService) parseXMLResponse(str string) (res *findItemsResponse,
                 return
         }
 
-        res = new(findItemsResponse)
+        res = new(FindItemsResponse)
 
         var v interface{}
         switch start.Name.Local {
         case "findItemsByCategoryResponse":
                 v = &struct {
                         XMLName xml.Name "findItemsByCategoryResponse"
-                        *findItemsResponse
+                        *FindItemsResponse
                 }{ xml.Name{}, res, }
         case "findItemsByProductResponse":
                 v = &struct {
                         XMLName xml.Name "findItemsByProductResponse"
-                        *findItemsResponse
+                        *FindItemsResponse
                 }{ xml.Name{}, res, }
         case "findItemsIneBayStoresResponse":
                 v = &struct {
                         XMLName xml.Name "findItemsIneBayStoresResponse"
-                        *findItemsResponse
+                        *FindItemsResponse
                 }{ xml.Name{}, res, }
         case "findItemsByKeywordsResponse":
                 v = &struct {
                         XMLName xml.Name "findItemsByKeywordsResponse"
-                        *findItemsResponse
+                        *FindItemsResponse
                 }{ xml.Name{}, res, }
         case "findItemsAdvancedResponse":
                 v = &struct {
                         XMLName xml.Name "findItemsAdvancedResponse"
-                        *findItemsResponse
+                        *FindItemsResponse
                 }{ xml.Name{}, res, }
                 // TODO: more response
         }
@@ -350,7 +340,7 @@ func getJSONResponseType(str string) (typ string) {
 }
 
 // parseJSONResponse parse JSON format response
-func (svc *FindingService) parseJSONResponse(str string) (res *findItemsResponse, err os.Error) {
+func (svc *FindingService) parseJSONResponse(str string) (res *FindItemsResponse, err os.Error) {
         ra := make([]*findItemsResponseJSON, 1)
 
         var v interface{}
@@ -375,8 +365,8 @@ func (svc *FindingService) parseJSONResponse(str string) (res *findItemsResponse
         return
 }
 
-func noJSON(r *findItemsResponseJSON) (res *findItemsResponse, err os.Error) {
-        res = &findItemsResponse{}
+func noJSON(r *findItemsResponseJSON) (res *FindItemsResponse, err os.Error) {
+        res = &FindItemsResponse{}
         res.SearchResult.Item = make([]Item, len(r.SearchResult[0].Item))
         err = RoughAssign(res, r)
         return

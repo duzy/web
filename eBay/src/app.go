@@ -6,11 +6,13 @@ import (
         "io/ioutil"
         "http"
         "bufio"
+        "bytes"
         "strings"
         "fmt"
         "net"
         "crypto/tls"
         "encoding/base64"
+        "xml"
 )
 
 type Cacher interface {
@@ -32,6 +34,11 @@ type App struct {
         ResponseFormat string
 
         cache Cacher
+}
+
+type ResponseParseBufferMaker interface {
+        //TODO: MakeJSONParseBuffer() (interface{}, os.Error)
+        MakeXMLParseBuffer() (interface{}, os.Error)
 }
 
 type eBayServiceCall interface {
@@ -183,3 +190,32 @@ func (app *App) Invoke(call eBayServiceCall) (str string, err os.Error) {
         return app.post(call)
 }
 
+// parseXMLResponse parse XML format response
+func (app *App) ParseXMLResponse(bm ResponseParseBufferMaker, str string) (err os.Error) {
+        p := xml.NewParser(bytes.NewBufferString(str))
+
+        var start *xml.StartElement
+        for {
+                tok, err := p.Token()
+                if err != nil { return }
+                if t, ok := tok.(xml.StartElement); ok {
+                        start = &t
+                        break;
+                }
+        }
+
+        if start == nil {
+                err = os.NewError("no xml.StartElement found")
+                return
+        }
+
+        v, err := bm.MakeXMLParseBuffer()
+        if err != nil { return }
+        if v == nil {
+                err = os.NewError(fmt.Sprintf("bad response: %s",start.Name.Local))
+                return
+        }
+
+        err = p.Unmarshal(v, start)
+        return
+}

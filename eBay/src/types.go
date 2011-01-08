@@ -1,5 +1,10 @@
 package eBay
 
+import (
+        "os"
+        "xml"
+)
+
 // See http://developer.ebay.com/DevZone/XML/docs/Reference/eBay/types/DetailLevelCodeType.html
 // DetailLevelCodeType
 const (
@@ -103,3 +108,33 @@ type Item struct {
         AutoPay bool
 }
 
+// TODO: ...
+type FindItemsResponse struct {
+        Ack string
+        Version string
+        Timestamp string
+        SearchResult struct { Item []Item }
+        ItemSearchURL string
+        PaginationOutput PaginationOutput
+}
+
+type GetCategoriesResponse struct {
+        Ack string
+        Version string
+        Timestamp string
+        Build string
+
+        UpdateTime string
+        CategoryCount int
+        CategoryVersion int
+        CategoryArray struct{ Category []Category }
+        ReservePriceAllowed bool
+        MinimumReservePrice float
+}
+
+func (resp *GetCategoriesResponse) MakeXMLParseBuffer() (interface{}, os.Error) {
+        return &struct {
+                XMLName xml.Name "GetCategoriesResponse"
+                *GetCategoriesResponse
+        }{ xml.Name{}, resp, }, nil
+}
