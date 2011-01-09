@@ -50,7 +50,7 @@ import (
 	"sync";
 	"http";
 	"unsafe";
-	"reflect";
+	//"reflect";
 	"strings";
 	"strconv";
 )
@@ -107,9 +107,9 @@ func Open(uri string) (conn *Connection, err os.Error) {
 	var host, uname, passwd, dbname, socket *C.char;
 	var port C.uint;
 
-	url, urlError := http.ParseURL(uri);
-	if urlError != nil {
-		err = MysqlError(fmt.Sprintf("Couldn't parse URL: %s", urlError));
+	url, err := http.ParseURL(uri);
+	if err != nil {
+		err = MysqlError(fmt.Sprintf("Couldn't parse URL: %s", err));
 		return;
 	}
 
@@ -253,19 +253,18 @@ func (conn *Connection) Lock()	{ conn.lock.Lock() }
 func (conn *Connection) Unlock() { conn.lock.Unlock() }
 
 func createParamBinds(args ...interface{}) (binds *C.MYSQL_BIND, data []BoundData, err os.Error) {
-	a := reflect.NewValue(args[0]).(*reflect.StructValue);
-	fcount := a.NumField();
+	fcount := len(args)
 	if fcount > 0 {
 		binds = C.mysql_bind_create_list(C.int(fcount));
 		data = make([]BoundData, fcount);
 		for i := 0; i < fcount; i++ {
-			switch arg := a.Field(i).(type) {
+			switch arg := args[i].(type) {
 			default:
 				err = MysqlError(
 					fmt.Sprintf("Unsupported param type %T", arg));
 				break;
 
-			case *reflect.IntValue:
+			case int: //*reflect.IntValue:
 				/* TODO use the native platform to do this conversion */
 				data[i] = *NewBoundData(
 					MysqlTypeLong,
@@ -277,7 +276,7 @@ func createParamBinds(args ...interface{}) (binds *C.MYSQL_BIND, data []BoundDat
 							len(data[i].buffer)));
 					break;
 				}
-				v := arg.Get();
+				v := arg //arg.Get();
 				for j := uint(0); j < 4; j += 1 {
 					data[i].buffer[j] = uint8((v >> (j * 8)) & 0xff)
 				}
@@ -292,9 +291,8 @@ func createParamBinds(args ...interface{}) (binds *C.MYSQL_BIND, data []BoundDat
 					unsafe.Pointer(&data[i].is_null),
 					unsafe.Pointer(&data[i].error));
 
-			case *reflect.StringValue:
-				//b := strings.Bytes(arg.Get());
-				b := []byte(arg.Get());
+			case string: // *reflect.StringValue:
+				b := []byte(arg); //(arg.Get());
 
 				data[i] = *NewBoundData(
 					MysqlTypeString,
@@ -313,6 +311,7 @@ func createParamBinds(args ...interface{}) (binds *C.MYSQL_BIND, data []BoundDat
 			}
 		}
 	}
+
 	if err != nil {
 		C.free(unsafe.Pointer(binds));
 		binds = nil;
@@ -350,7 +349,7 @@ func createResultBinds(stmt *C.MYSQL_STMT) (*C.MYSQL_BIND, *[]BoundData) {
 	return nil, nil;
 }
 
-func (conn *Connection) execute(s *Statement, parameters ...interface{}) (dbcur *Cursor, err os.Error) {
+func (conn *Connection) execute(s *Statement, params ...interface{}) (dbcur *Cursor, err os.Error) {
 
 	dbcur = nil;
 
@@ -362,7 +361,7 @@ func (conn *Connection) execute(s *Statement, parameters ...interface{}) (dbcur 
 	pcount := uint64(C.mysql_stmt_param_count(s.stmt));
 
 	if pcount > 0 {
-		if binds, data, e = createParamBinds(parameters...); e == nil {
+		if binds, data, e = createParamBinds(params...); e == nil {
 			if rc := C.mysql_stmt_bind_param(s.stmt, binds); rc != 0 {
 				err = conn.lastError();
 				goto cleanup;
@@ -397,8 +396,15 @@ cleanup:
 	return;
 }
 
-func (conn *Connection) Execute(stmt *Statement, parameters ...interface{}) (rs *ResultSet, err os.Error) {
-	rs, err = NewResultSet(conn, stmt, parameters...);
+func (conn *Connection) Execute(stmt *Statement, params ...interface{}) (rs *ResultSet, err os.Error) {
+	rs = &ResultSet{};
+	rs.conn = conn;
+	cur, e := conn.execute(stmt, params...);
+	if e == nil {
+		rs.cursor = cur
+	} else {
+		err = e;
+	}
 	return;
 }
 
@@ -495,16 +501,19 @@ type ResultSet struct {
 	cursor	*Cursor;
 }
 
-func NewResultSet(conn *Connection, stmt *Statement, params ...interface{}) (rs *ResultSet, err os.Error) {
-	rs = &ResultSet{};
-	rs.conn = conn;
-	cur, e := conn.execute(stmt, params...);
-	if e == nil {
-		rs.cursor = cur
-	} else {
-		err = e;
-	}
-	return;
+func (rs *ResultSet) Fetch() (res *Result, err os.Error) {
+        if rs.cursor == nil {
+                err = os.NewError("no cursor")
+                return
+        }
+
+        r, e := rs.cursor.Fetch()
+        if e == nil {
+                res = &Result{ r, nil }
+        } else {
+                res = &Result{ nil, e }
+        }
+        return
 }
 
 func (rs *ResultSet) Iter() (ch <-chan *Result) {

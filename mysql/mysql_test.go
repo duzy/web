@@ -15,9 +15,9 @@ import (
 )
 
 func defaultConn(t *testing.T) *mysql.Connection {
-	conn, e := mysql.Open("//test@localhost:3306/test");
+	conn, e := mysql.Open("mysql://test:abc@localhost:3306/dusell");
 	if conn == nil || e != nil {
-		t.Error("Couldn't connect to test:abc@127.0.0.1:3306:test", e);
+		t.Error("Couldn't connect to database:", e);
 		return nil;
 	}
 	return conn;
@@ -37,8 +37,7 @@ var tableT = []string{
 }
 
 func prepareTestTable(t *testing.T, conn *mysql.Connection) {
-	stmt, sErr := conn.Prepare(
-		"CREATE TEMPORARY TABLE t (i INT, s VARCHAR(100));");
+	stmt, sErr := conn.Prepare("CREATE TEMPORARY TABLE t(i INT, s VARCHAR(100));");
 	if sErr != nil {
 		error(t, sErr, "Couldn't prepare statement");
 		return;
@@ -51,7 +50,7 @@ func prepareTestTable(t *testing.T, conn *mysql.Connection) {
 	}
 	rs.Close();
 
-	stmt, sErr = conn.Prepare("INSERT INTO t (i, s) VALUES (?, ?)");
+	stmt, sErr = conn.Prepare("INSERT INTO t(i, s) VALUES(?, ?)");
 	if sErr != nil {
 		error(t, sErr, "Couldn't prepare statement");
 		return;
@@ -167,12 +166,22 @@ func execute(t *testing.T, conn *mysql.Connection, stmt *mysql.Statement, ch cha
 	if cErr != nil {
 		error(t, cErr, "Couldn't select")
 	}
+        /*
 	for res := range rs.Iter() {
 		if res.Error() != nil {
 			error(t, res.Error(), "Couldn't fetch")
 		}
 	}
 	ch <- 1;
+         */
+	for {
+                res, e := rs.Fetch()
+                if e != nil { break; }
+	        if res.Error() != nil {
+			error(t, res.Error(), "Couldn't fetch")
+                        break;
+		}
+	}
 }
 
 func TestReentrantExecute(t *testing.T) {
@@ -182,8 +191,7 @@ func TestReentrantExecute(t *testing.T) {
 		return;
 	}
 
-	stmt, sErr := conn.Prepare(
-		"SELECT * FROM t ORDER BY RAND()");
+	stmt, sErr := conn.Prepare("SELECT * FROM t ORDER BY RAND()");
 	if sErr != nil {
 		error(t, sErr, "Couldn't prepare")
 	}
