@@ -45,7 +45,6 @@ char _charAt(void *p, int i) { return *((char *) (p + i)); }
 import "C"
 
 import (
-	"../db/_obj/db";
 	"os";
 	"fmt";
 	"sync";
@@ -86,9 +85,6 @@ type MysqlError os.ErrorString
 
 func (e MysqlError) String() string	{ return string(e) }
 
-var Open db.OpenSignature
-var Version db.VersionSignature
-
 // Maintains the connection state of a single MySQL connection.
 type Connection struct {
 	handle	*C.MYSQL;
@@ -107,7 +103,7 @@ type Connection struct {
 //
 //   //user:pass@host:port/database_name
 //
-func open(uri string) (conn db.Connection, err os.Error) {
+func Open(uri string) (conn *Connection, err os.Error) {
 	var host, uname, passwd, dbname, socket *C.char;
 	var port C.uint;
 
@@ -161,7 +157,7 @@ func open(uri string) (conn db.Connection, err os.Error) {
 		}
 	}
 
-	c := Connection{};
+	c := &Connection{};
 	c.lock = new(sync.Mutex);
 	c.handle = C.mysql_init(nil);
 	if c.handle == nil {
@@ -209,7 +205,7 @@ cleanup:
 	return;
 }
 
-func version() (ver map[string]string, err os.Error) {
+func Version() (ver map[string]string, err os.Error) {
 	cver := C.mysql_get_client_version();
 	ver["client"] = fmt.Sprintf("%d", uint64(cver));
 	return;
@@ -217,21 +213,19 @@ func version() (ver map[string]string, err os.Error) {
 
 func init() {
 	C.mysql_library_init(0, nil, nil);
-	Open = open;
-	Version = version;
 }
 
 // Returns the last error that occurred as an os.Error
-func (conn Connection) lastError() os.Error {
+func (conn *Connection) lastError() os.Error {
 	if err := C.mysql_error(conn.handle); *err != 0 {
 		return os.NewError(C.GoString(err))
 	}
 	return nil;
 }
 
-func (conn Connection) Prepare(query string) (dbs db.Statement, e os.Error) {
-	s := Statement{};
-	s.conn = &conn;
+func (conn *Connection) Prepare(query string) (dbs *Statement, e os.Error) {
+	s := &Statement{};
+	s.conn = conn;
 
 	conn.Lock();
 	s.stmt = C.mysql_stmt_init(conn.handle);
@@ -255,8 +249,8 @@ func (conn Connection) Prepare(query string) (dbs db.Statement, e os.Error) {
 	return;
 }
 
-func (conn Connection) Lock()	{ conn.lock.Lock() }
-func (conn Connection) Unlock()	{ conn.lock.Unlock() }
+func (conn *Connection) Lock()	{ conn.lock.Lock() }
+func (conn *Connection) Unlock() { conn.lock.Unlock() }
 
 func createParamBinds(args ...interface{}) (binds *C.MYSQL_BIND, data []BoundData, err os.Error) {
 	a := reflect.NewValue(args[0]).(*reflect.StructValue);
@@ -356,64 +350,60 @@ func createResultBinds(stmt *C.MYSQL_STMT) (*C.MYSQL_BIND, *[]BoundData) {
 	return nil, nil;
 }
 
-func (conn Connection) execute(stmt db.Statement, parameters ...interface{}) (dbcur *cursor, err os.Error) {
+func (conn *Connection) execute(s *Statement, parameters ...interface{}) (dbcur *Cursor, err os.Error) {
 
 	dbcur = nil;
-	if s, ok := stmt.(Statement); ok {
-		var (
-			binds	*C.MYSQL_BIND	= nil;
-			data	[]BoundData;
-			e	os.Error;
-		)
-		pcount := uint64(C.mysql_stmt_param_count(s.stmt));
 
-		if pcount > 0 {
-			if binds, data, e = createParamBinds(parameters...); e == nil {
-				if rc := C.mysql_stmt_bind_param(s.stmt, binds); rc != 0 {
-					err = conn.lastError();
-					goto cleanup;
-				}
-			} else {
-				err = e;
+	var (
+		binds	*C.MYSQL_BIND	= nil;
+		data	[]BoundData;
+		e	os.Error;
+	)
+	pcount := uint64(C.mysql_stmt_param_count(s.stmt));
+
+	if pcount > 0 {
+		if binds, data, e = createParamBinds(parameters...); e == nil {
+			if rc := C.mysql_stmt_bind_param(s.stmt, binds); rc != 0 {
+				err = conn.lastError();
 				goto cleanup;
 			}
-			// prevent data no-use errors.  We just need to keep it around so
-			// that GC doesn't clean it up.
-			data = data;
+		} else {
+			err = e;
+			goto cleanup;
 		}
+		// prevent data no-use errors.  We just need to keep it around so
+		// that GC doesn't clean it up.
+		data = data;
+	}
 
-		conn.Lock();
-		if rc := C.mysql_stmt_execute(s.stmt); rc != 0 {
+	conn.Lock();
+	if rc := C.mysql_stmt_execute(s.stmt); rc != 0 {
+		err = conn.lastError()
+	} else {
+		// Must call store result before unlocking...
+		if rc := C.mysql_stmt_store_result(s.stmt); rc != 0 {
 			err = conn.lastError()
 		} else {
-			// Must call store result before unlocking...
-			if rc := C.mysql_stmt_store_result(s.stmt); rc != 0 {
-				err = conn.lastError()
-			} else {
-				dbcur = NewCursorValue(s)
-			}
+			dbcur = NewCursorValue(s)
 		}
-
-	cleanup:
-		if binds != nil {
-			C.free(unsafe.Pointer(binds))
-		}
-		conn.Unlock();
-	} else {
-		err = MysqlError("Execute: 'stmt' is not a mysql.Statement")
 	}
+
+cleanup:
+	if binds != nil {
+		C.free(unsafe.Pointer(binds))
+	}
+	conn.Unlock();
 
 	return;
 }
 
-func (conn Connection) Execute(stmt db.Statement, parameters ...interface{}) (rs db.ResultSet, err os.Error) {
-	s := stmt.(Statement);
-	rs, err = NewResultSet(conn, s, parameters...);
+func (conn *Connection) Execute(stmt *Statement, parameters ...interface{}) (rs *ResultSet, err os.Error) {
+	rs, err = NewResultSet(conn, stmt, parameters...);
 	return;
 }
 
 // Closes and cleans up the connection.
-func (conn Connection) Close() os.Error {
+func (conn *Connection) Close() os.Error {
 	C.mysql_close(conn.handle);
 	conn.handle = nil;
 	return nil;
@@ -424,7 +414,7 @@ type Statement struct {
 	conn	*Connection;
 }
 
-func (s Statement) Close() (err os.Error) {
+func (s *Statement) Close() (err os.Error) {
 	if s.stmt != nil {
 		s.conn.Lock();
 		if r := C.mysql_stmt_close(s.stmt); r != 0 {
@@ -436,22 +426,22 @@ func (s Statement) Close() (err os.Error) {
 	return nil;
 }
 
-type cursor struct {
+type Cursor struct {
 	stmt	*Statement;
 	rbinds	*C.MYSQL_BIND;
 	rdata	*[]BoundData;
 	bound	bool;
 }
 
-func NewCursorValue(s Statement) *cursor {
-	cur := &cursor{};
-	cur.stmt = &s;
+func NewCursorValue(s *Statement) *Cursor {
+	cur := &Cursor{};
+	cur.stmt = s;
 	cur.bound = false;
 	cur.setupResultBinds();
 	return cur;
 }
 
-func (c *cursor) setupResultBinds() (err os.Error) {
+func (c *Cursor) setupResultBinds() (err os.Error) {
 	if c.bound {
 		return
 	}
@@ -465,7 +455,7 @@ func (c *cursor) setupResultBinds() (err os.Error) {
 	return;
 }
 
-func (c *cursor) Fetch() (res []interface{}, err os.Error) {
+func (c *Cursor) Fetch() (res []interface{}, err os.Error) {
 	if rc := C.mysql_stmt_fetch(c.stmt.stmt); rc == 0 {
 		res = make([]interface{}, len(*c.rdata));
 		rdata := *c.rdata;
@@ -480,7 +470,7 @@ func (c *cursor) Fetch() (res []interface{}, err os.Error) {
 	return;
 }
 
-func (c *cursor) Close() (err os.Error) {
+func (c *Cursor) Close() (err os.Error) {
 	if c.rbinds != nil {
 		c.stmt.conn.Lock();
 		C.mysql_bind_free(c.rbinds);
@@ -497,16 +487,16 @@ type Result struct {
 	error	os.Error;
 }
 
-func (r Result) Data() []interface{}	{ return r.data }
-func (r Result) Error() os.Error	{ return r.error }
+func (r *Result) Data() []interface{}	{ return r.data }
+func (r *Result) Error() os.Error	{ return r.error }
 
 type ResultSet struct {
-	conn	Connection;
-	cursor	*cursor;
+	conn	*Connection;
+	cursor	*Cursor;
 }
 
-func NewResultSet(conn Connection, stmt Statement, params ...interface{}) (rs ResultSet, err os.Error) {
-	rs = ResultSet{};
+func NewResultSet(conn *Connection, stmt *Statement, params ...interface{}) (rs *ResultSet, err os.Error) {
+	rs = &ResultSet{};
 	rs.conn = conn;
 	cur, e := conn.execute(stmt, params...);
 	if e == nil {
@@ -517,29 +507,29 @@ func NewResultSet(conn Connection, stmt Statement, params ...interface{}) (rs Re
 	return;
 }
 
-func (rs ResultSet) Iter() (ch <-chan db.Result) {
-	sendch := make(chan db.Result);
+func (rs *ResultSet) Iter() (ch <-chan *Result) {
+	sendch := make(chan *Result);
 	go returnResults(rs.cursor, sendch);
 	ch = sendch;
 	return;
 }
 
-func returnResults(dc *cursor, ch chan db.Result) {
+func returnResults(dc *Cursor, ch chan *Result) {
 	r, e := dc.Fetch();
 	for ; !closed(ch) && r != nil && e == nil; r, e = dc.Fetch() {
-		ch <- Result{r, nil}
+		ch <- &Result{r, nil}
 	}
 	if e != nil {
-		ch <- Result{nil, e}
+		ch <- &Result{nil, e}
 	}
 	e = dc.Close();
 	if e != nil {
-		ch <- Result{nil, e}
+		ch <- &Result{nil, e}
 	}
 	close(ch);
 }
 
-func (rs ResultSet) Close() (e os.Error) {
+func (rs *ResultSet) Close() (e os.Error) {
 	if rs.cursor != nil {
 		e = rs.cursor.Close();
 		rs.cursor = nil

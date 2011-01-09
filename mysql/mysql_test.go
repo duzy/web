@@ -11,17 +11,16 @@ import (
 	"testing";
 	"mysql";
 	"rand";
-	"db";
 	"os";
 )
 
-func defaultConn(t *testing.T) *db.Connection {
-	conn, e := mysql.Open("//root@localhost:3306/test");
+func defaultConn(t *testing.T) *mysql.Connection {
+	conn, e := mysql.Open("//test@localhost:3306/test");
 	if conn == nil || e != nil {
-		t.Error("Couldn't connect to root@127.0.0.1:3306:test", e);
+		t.Error("Couldn't connect to test:abc@127.0.0.1:3306:test", e);
 		return nil;
 	}
-	return &conn;
+	return conn;
 }
 
 var tableT = []string{
@@ -37,7 +36,7 @@ var tableT = []string{
 	"test5",
 }
 
-func prepareTestTable(t *testing.T, conn *db.Connection) {
+func prepareTestTable(t *testing.T, conn *mysql.Connection) {
 	stmt, sErr := conn.Prepare(
 		"CREATE TEMPORARY TABLE t (i INT, s VARCHAR(100));");
 	if sErr != nil {
@@ -69,7 +68,7 @@ func prepareTestTable(t *testing.T, conn *db.Connection) {
 	stmt.Close();
 }
 
-func startTestWithLoadedFixture(t *testing.T) (conn *db.Connection) {
+func startTestWithLoadedFixture(t *testing.T) (conn *mysql.Connection) {
 	conn = defaultConn(t);
 	if conn == nil {
 		return
@@ -133,7 +132,7 @@ func TestOne(t *testing.T) {
 	conn.Close();
 }
 
-func prepareEmpty(t *testing.T, conn *db.Connection, ch chan int) {
+func prepareEmpty(t *testing.T, conn *mysql.Connection, ch chan int) {
 	stmt, sErr := conn.Prepare(
 		"SELECT * FROM t ORDER BY RAND()");
 	if sErr != nil {
@@ -163,8 +162,8 @@ func TestReentrantPrepare(t *testing.T) {
 	conn.Close();
 }
 
-func execute(t *testing.T, conn *db.Connection, stmt *db.Statement, ch chan int) {
-	rs, cErr := conn.Execute(*stmt, rand.Int());
+func execute(t *testing.T, conn *mysql.Connection, stmt *mysql.Statement, ch chan int) {
+	rs, cErr := conn.Execute(stmt, rand.Int());
 	if cErr != nil {
 		error(t, cErr, "Couldn't select")
 	}
@@ -193,7 +192,7 @@ func TestReentrantExecute(t *testing.T) {
 
 	for i, _ := range ch {
 		ch[i] = make(chan int);
-		go execute(t, conn, &stmt, ch[i]);
+		go execute(t, conn, stmt, ch[i]);
 	}
 	for _, c := range ch {
 		<-c
@@ -203,7 +202,7 @@ func TestReentrantExecute(t *testing.T) {
 	conn.Close();
 }
 
-func findRand(t *testing.T, conn *db.Connection, ch chan *vector.Vector) {
+func findRand(t *testing.T, conn *mysql.Connection, ch chan *vector.Vector) {
 	stmt, sErr := conn.Prepare(
 		"SELECT * FROM t WHERE i != ? ORDER BY RAND()");
 	if sErr != nil {
@@ -257,12 +256,11 @@ func TestPrepareExecuteReentrant(t *testing.T) {
 }
 
 func TestChannelInterface(t *testing.T) {
-	con := startTestWithLoadedFixture(t);
-	if con == nil {
+	conn := startTestWithLoadedFixture(t);
+	if conn == nil {
 		t.Error("conn was nil");
 		return;
 	}
-	conn := *con;
 
 	stmt, sErr := conn.Prepare(
 		"SELECT ?, i AS pos, s AS phrase FROM t ORDER BY pos ASC");
@@ -297,12 +295,11 @@ func TestChannelInterface(t *testing.T) {
 }
 
 func TestChannelInterfacePrematureClose(t *testing.T) {
-	con := startTestWithLoadedFixture(t);
-	if con == nil {
+	conn := startTestWithLoadedFixture(t);
+	if conn == nil {
 		t.Error("conn was nil");
 		return;
 	}
-	conn := *con;
 
 	execOne := func() {
 		stmt, sErr := conn.Prepare(
