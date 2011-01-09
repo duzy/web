@@ -8,7 +8,7 @@ import (
 )
 
 func TestTradingCallGetCategories(t *testing.T) {
-        a := NewApp(true)
+        a := NewApp()
 
         trading := a.NewTradingService()
         c := trading.NewGetCategoriesCall()

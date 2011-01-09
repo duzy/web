@@ -4,6 +4,7 @@ import (
         "os"
         "io"
         "fmt"
+        "runtime"
 )
 
 // Implements AppModel for CGI web.App.
@@ -67,7 +68,23 @@ func (cgi *CGIModel) RequestReader() (r io.Reader) {
 
 func CGIHandleErrors() {
         if err := recover(); err != nil {
-                fmt.Fprintf(os.Stdout, "Content-Type: text/html\n\n")
-                fmt.Fprintf(os.Stdout, "<b>error</b>: %v", err)
+                //stack := make([]uintptr, 5)
+
+                stack, file, line, ok := runtime.Caller(5)
+                if !ok {
+                        file = "???"
+                        line = 0
+                }
+
+                f := runtime.FuncForPC(stack)
+
+                fmt.Fprintf(os.Stdout, "Content-Type: text/html; charset=utf-8\n\n")
+                fmt.Fprintf(os.Stdout, `<font color="red"><b>error</b>:</font> %v<p>`, err)
+                fmt.Fprintf(os.Stdout, `%s:%d<br/>`, file, line)
+                if f != nil {
+                        file, line = f.FileLine(stack)
+                        fmt.Fprintf(os.Stdout, `%s:%d: %s<br/>`, file, line, f.Name())
+                }
+                fmt.Fprintf(os.Stdout, `</p>`)
         }
 }

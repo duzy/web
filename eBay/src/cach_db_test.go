@@ -7,6 +7,21 @@ import (
         "reflect"
 )
 
+func TestCacheCategoriesByLevel(t *testing.T) {
+        c, err := NewDBCache("localhost", "test", "abc", "dusell")
+        if err != nil { t.Errorf("NewDBCache: %v", err); return }
+
+        defer c.Close()
+
+        _, err = c.GetCategoriesByLevel(1)
+        if err != nil {
+                t.Errorf("GetCategoriesByLevel: %v", err);
+                return
+        }
+
+        //fmt.Printf("cats: %v\n", cats)
+}
+
 func TestCacheCategory(t *testing.T) {
         c, err := NewDBCache("localhost", "test", "abc", "dusell")
         if err != nil { t.Errorf("NewDBCache: %v", err); return }
@@ -14,7 +29,7 @@ func TestCacheCategory(t *testing.T) {
         defer c.Close()
 
         cat := &Category{
-        CategoryID: "123456",
+        CategoryID: "1234567890",
         CategoryLevel: 5,
         CategoryName: fmt.Sprintf("test category: %v", time.Nanoseconds()),
         CategoryParentID: "<none>",

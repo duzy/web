@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-        a := eBay.NewApp(true)
+        a := eBay.NewApp()
         trading := a.NewTradingService()
 
         c := trading.NewGetCategoriesCall()

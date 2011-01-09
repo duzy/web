@@ -99,7 +99,7 @@ type eBayFindingService_GetVersion struct {
 
 type eBayFindingService_GetHistograms struct {
         eBayFindingServiceCall
-        CategoryID string
+        CategoryId string
 }
 
 type eBayFindingService_GetSearchKeywordsRecommendation struct {
@@ -109,6 +109,7 @@ type eBayFindingService_GetSearchKeywordsRecommendation struct {
 
 type eBayFindingService_FindItemsByCategory struct {
         eBayFindingServiceCall
+        CategoryId string
 }
 
 type eBayFindingService_FindItemsByProduct struct {
@@ -146,7 +147,7 @@ func eBayFindingCallOpName(call interface{}) (op string) {
         return
 }
 
-func (call *eBayFindingServiceCall) GetURL(app *App) string { return URL_eBayFindingService }
+func (call *eBayFindingServiceCall) GetURL(app *App) string { return URL_eBayFinding }
 
 func (call *eBayFindingServiceCall) getHeaders(ncall interface{}, app *App) (h map[string]string) {
         oper := eBayFindingCallOpName(ncall)
@@ -234,16 +235,17 @@ func (call *eBayFindingServiceCall) newMessage(ncall interface{}) (io.ReadWriter
 func (call *eBayFindingService_GetVersion)                      GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
 func (call *eBayFindingService_GetHistograms)                   GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
 func (call *eBayFindingService_GetSearchKeywordsRecommendation) GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
+func (call *eBayFindingService_FindItemsByCategory)             GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
 func (call *eBayFindingService_FindItemsByKeywords)             GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
 func (call *eBayFindingService_FindItemsAdvanced)               GetHeaders(app *App) map[string] string { return call.getHeaders(call, app) }
 
 func (call *eBayFindingService_GetVersion)                      GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
 func (call *eBayFindingService_GetHistograms)                   GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
 func (call *eBayFindingService_GetSearchKeywordsRecommendation) GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
+func (call *eBayFindingService_FindItemsByCategory)             GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
 func (call *eBayFindingService_FindItemsByKeywords)             GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
 func (call *eBayFindingService_FindItemsAdvanced)               GetMessage(app *App) (io.Reader, int) { return call.newMessage(call) }
 
-// TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsByCategory.html
 // TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsByProduct.html
 // TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsIneBayStores.html
 // TODO: http://developer.ebay.com/DevZone/finding/CallRef/findItemsAdvanced.html
@@ -251,81 +253,9 @@ func (call *eBayFindingService_FindItemsAdvanced)               GetMessage(app *
 func (svc *FindingService) NewGetVersionCall() (call *eBayFindingService_GetVersion)                    { return &eBayFindingService_GetVersion{} }
 func (svc *FindingService) NewGetHistogramsCall() (call *eBayFindingService_GetHistograms)              { return &eBayFindingService_GetHistograms{} }
 func (svc *FindingService) NewGetSearchKeywordsRecommendationCall() (call *eBayFindingService_GetSearchKeywordsRecommendation) { return &eBayFindingService_GetSearchKeywordsRecommendation{} }
+func (svc *FindingService) NewFindItemsByCategoryCall() (call *eBayFindingService_FindItemsByCategory)  { return &eBayFindingService_FindItemsByCategory{} }
 func (svc *FindingService) NewFindItemsByKeywordsCall() (call *eBayFindingService_FindItemsByKeywords)  { return &eBayFindingService_FindItemsByKeywords{} }
 func (svc *FindingService) NewFindItemsAdvancedCall() (call *eBayFindingService_FindItemsAdvanced)      { return &eBayFindingService_FindItemsAdvanced{} }
-
-// ParseResponse parse text response of an eBay operation.
-func (svc *FindingService) ParseResponse(str string) (res *FindItemsResponse, err os.Error) {
-        switch svc.app.ResponseFormat {
-        case "JSON":
-                res, err = svc.parseJSONResponse(str)
-        case "XML":
-                res, err = svc.parseXMLResponse(str)
-        default:
-                err = os.NewError("unknown data format '"+svc.app.ResponseFormat+"'")
-        }
-        return
-}
-
-// parseXMLResponse parse XML format response
-func (svc *FindingService) parseXMLResponse(str string) (res *FindItemsResponse, err os.Error) {
-        p := xml.NewParser(bytes.NewBufferString(str))
-
-        var start *xml.StartElement
-        for {
-                tok, err := p.Token()
-                if err != nil { return }
-                if t, ok := tok.(xml.StartElement); ok {
-                        start = &t
-                        break;
-                }
-        }
-
-        if start == nil {
-                err = os.NewError("no xml.StartElement found")
-                return
-        }
-
-        res = new(FindItemsResponse)
-
-        var v interface{}
-        switch start.Name.Local {
-        case "findItemsByCategoryResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsByCategoryResponse"
-                        *FindItemsResponse
-                }{ xml.Name{}, res, }
-        case "findItemsByProductResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsByProductResponse"
-                        *FindItemsResponse
-                }{ xml.Name{}, res, }
-        case "findItemsIneBayStoresResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsIneBayStoresResponse"
-                        *FindItemsResponse
-                }{ xml.Name{}, res, }
-        case "findItemsByKeywordsResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsByKeywordsResponse"
-                        *FindItemsResponse
-                }{ xml.Name{}, res, }
-        case "findItemsAdvancedResponse":
-                v = &struct {
-                        XMLName xml.Name "findItemsAdvancedResponse"
-                        *FindItemsResponse
-                }{ xml.Name{}, res, }
-                // TODO: more response
-        }
-
-        if v == nil {
-                err = os.NewError(fmt.Sprintf("bad response: %s",start.Name.Local))
-                return
-        }
-
-        err = p.Unmarshal(v, start)
-        return
-}
 
 func getJSONResponseType(str string) (typ string) {
         n := strings.Index(str, `"` /*`{"`*/)
@@ -340,7 +270,7 @@ func getJSONResponseType(str string) (typ string) {
 }
 
 // parseJSONResponse parse JSON format response
-func (svc *FindingService) parseJSONResponse(str string) (res *FindItemsResponse, err os.Error) {
+func (svc *FindingService) ParseJSONResponse(str string) (res *FindItemsResponse, err os.Error) {
         ra := make([]*findItemsResponseJSON, 1)
 
         var v interface{}

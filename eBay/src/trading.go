@@ -33,11 +33,7 @@ func (call *eBayTradingCall) GetHeaders(app *App) (h map[string]string) {
         return
 }
 
-func (call *eBayTradingCall) GetURL(app *App) (u string) {
-        u = URL_eBayTradingSandbox
-        //u = URL_eBayTrading
-        return
-}
+func (call *eBayTradingCall) GetURL(app *App) string { return URL_eBayTrading }
 
 func eBayTradingCallOpName(call interface{}) (op string) {
         switch call.(type) {

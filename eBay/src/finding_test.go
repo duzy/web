@@ -3,14 +3,14 @@ package eBay
 import (
         "testing"
         "strings"
-        //"fmt"
+        "fmt"
         "xml"
         "json"
         "bytes"
 )
 
 func TestAPIGetVersion(t *testing.T) {
-        eb := NewApp(false)
+        eb := NewApp()
         svc := eb.NewFindingService()
         call := svc.NewGetVersionCall() // FindService
         s, err := eb.Invoke(call)
@@ -23,9 +23,41 @@ func TestAPIGetVersion(t *testing.T) {
         if n == -1 { t.Errorf("no tag </version>"); return }
 }
 
+func TestAPIFindItemsByCategory(t *testing.T) {
+        a := NewApp()
+        svc := a.NewFindingService()
+        call := svc.NewFindItemsByCategoryCall()
+        //call.CategoryId = "1"
+        call.CategoryId = "156522"
+
+        s, err := a.Invoke(call)
+        if err != nil { t.Error(err); return }
+
+        //fmt.Printf("%v\n", s)
+
+        resp := new(FindItemsByCategoryResponse)
+        err = a.ParseXMLResponse(resp, s)
+        if err != nil { t.Error(err); return }
+        if resp.ErrorMessage != nil {
+                //fmt.Printf("%v\n", resp.ErrorMessage)
+                msg := fmt.Sprintf("[%v] %v",
+                        resp.ErrorMessage.Error[0].ErrorId,
+                        resp.ErrorMessage.Error[0].Message)
+                t.Errorf("findItemsByCategory: %s\n", msg)
+                return
+        }
+
+        if len(resp.SearchResult.Item) <= 0 {
+                t.Errorf("findItemsByCategory: no items returned")
+                return
+        }
+
+        //fmt.Printf("%v\n", resp.SearchResult.Item)
+}
+
 func TestAPIFindItemsByKeywords(t *testing.T) {
         { // XML format
-                eb := NewApp(false)
+                eb := NewApp()
                 eb.ResponseFormat = "XML"
 
                 svc := eb.NewFindingService()
@@ -53,7 +85,7 @@ func TestAPIFindItemsByKeywords(t *testing.T) {
                 if n == -1 { t.Error("no tag found: <item> [3]"); goto finish }
         }
         { // JSON format
-                eb := NewApp(false)
+                eb := NewApp()
                 eb.ResponseFormat = "JSON"
 
                 svc := eb.NewFindingService()
@@ -197,8 +229,8 @@ func TestXMLUnmarshalFindItemsResponse(t *testing.T) {
         if v.PaginationOutput.TotalEntries != 4730 { t.Error("noJSON: paginationOutput.totalEntries:",v.PaginationOutput.TotalEntries); return }
 }
 
-func TestFindingServiceParseResponse(t *testing.T) {
-        a := NewApp(false)
+func TestFindingParseResponse(t *testing.T) {
+        a := NewApp()
         svc := a.NewFindingService()
         call := svc.NewFindItemsByKeywordsCall()//("Nokia N8", 3)
         call.Keywords = "Nokia N8"
@@ -206,13 +238,13 @@ func TestFindingServiceParseResponse(t *testing.T) {
         xml, err := a.Invoke(call)
         if err != nil { t.Error(err); return }
 
-        res, err := svc.ParseResponse(xml)
+        resp := new(FindItemsByKeywordsResponse)
+        err = a.ParseXMLResponse(resp, xml)
         //fmt.Printf("%v\n", res)
 
         if err != nil { t.Error(err); return }
-        if res == nil { t.Error("no xml response"); return }
-        if len(res.SearchResult.Item) != 3 {
-                t.Errorf("xml: not 3 items: %v", len(res.SearchResult.Item))
+        if len(resp.SearchResult.Item) != 3 {
+                t.Errorf("xml: not 3 items: %v", len(resp.SearchResult.Item))
                 return
         }
 
@@ -228,13 +260,13 @@ func TestFindingServiceParseResponse(t *testing.T) {
 
         //fmt.Printf("json: %v\n",json)
 
-        res, err = svc.ParseResponse(json)
+        res, err := svc.ParseJSONResponse(json)
         //fmt.Printf("%v\n", res)
 
         if err != nil { t.Error(err); return }
         if res == nil { t.Error("no json response"); return }
-        if len(res.SearchResult.Item) != 3 {
-                t.Error("json: not 3 items:", len(res.SearchResult.Item))
+        if len(resp.SearchResult.Item) != 3 {
+                t.Error("json: not 3 items:", len(resp.SearchResult.Item))
                 return
         }
 }

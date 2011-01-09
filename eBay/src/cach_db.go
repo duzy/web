@@ -11,10 +11,10 @@ import (
 const (
         SQL_CREATE_CACHE_CATEGORY_TABLE = `
 CREATE TABLE IF NOT EXISTS table_eBay_cache_categories(
-  CategoryID VARCHAR(32) PRIMARY KEY,
+  CategoryID VARCHAR(10) PRIMARY KEY,
   CategoryLevel INT,
-  CategoryName VARCHAR(128) NOT NULL,
-  CategoryParentID VARCHAR(32),
+  CategoryName VARCHAR(30) NOT NULL,
+  CategoryParentID VARCHAR(10),
   AutoPayEnabled TINYINT DEFAULT 1,
   BestOfferEnabled TINYINT DEFAULT 1
 )
@@ -47,13 +47,26 @@ SELECT
 FROM table_eBay_cache_categories
 WHERE CategoryID=? LIMIT 1
 `
+        SQL_SELECT_CACHE_CATEGORY_ROW_BY = `
+SELECT
+  CategoryID,
+  CategoryLevel,
+  CategoryName,
+  CategoryParentID,
+  AutoPayEnabled,
+  BestOfferEnabled
+FROM table_eBay_cache_categories
+WHERE 
+`
         SQL_CREATE_CACHE_ITEM_TABLE = `
 CREATE TABLE IF NOT EXISTS table_eBay_cache_items(
-  ItemId VARCHAR(32) PRIMARY KEY,
+  ItemId VARCHAR(19) PRIMARY KEY,
   Title VARCHAR(128) NOT NULL,
   GlobalId VARCHAR(16),
-  PrimaryCategory$CategoryID VARCHAR(32) NOT NULL,
-  PrimaryCategory$CategoryName VARCHAR(128) NOT NULL,
+  PrimaryCategory$CategoryID VARCHAR(10) NOT NULL,
+  PrimaryCategory$CategoryName VARCHAR(30) NOT NULL,
+  SecondaryCategory$CategoryID VARCHAR(10) NOT NULL,
+  SecondaryCategory$CategoryName VARCHAR(30) NOT NULL,
   GalleryURL VARCHAR(256),
   GalleryPlusPictureURL VARCHAR(512),
   ViewItemURL VARCHAR(256),
@@ -63,6 +76,13 @@ CREATE TABLE IF NOT EXISTS table_eBay_cache_items(
   Country VARCHAR(32),
   Condition$ConditionId VARCHAR(32),
   Condition$ConditionDisplayName VARCHAR(256),
+  SellerInfo$FeedbackRatingStar VARCHAR(20),
+  SellerInfo$FeedbackScore INT,
+  SellerInfo$PositiveFeedbackPercent FLOAT,
+  SellerInfo$SellerUserName VARCHAR(30),
+  SellerInfo$TopRatedSeller TINYINT,
+  StoreInfo$StoreName VARCHAR(200),
+  StoreInfo$StoreURL VARCHAR(256),
   ShippingInfo$ShippingServiceCost$Amount FLOAT,
   ShippingInfo$ShippingServiceCost$CurrencyId CHAR(3),
   ShippingInfo$ShippingType VARCHAR(32),
@@ -94,6 +114,8 @@ INSERT INTO table_eBay_cache_items(
   GlobalId,
   PrimaryCategory$CategoryID,
   PrimaryCategory$CategoryName,
+  SecondaryCategory$CategoryID,
+  SecondaryCategory$CategoryName,
   GalleryURL,
   GalleryPlusPictureURL,
   ViewItemURL,
@@ -103,6 +125,13 @@ INSERT INTO table_eBay_cache_items(
   Country,
   Condition$ConditionId,
   Condition$ConditionDisplayName,
+  SellerInfo$FeedbackRatingStar,
+  SellerInfo$FeedbackScore,
+  SellerInfo$PositiveFeedbackPercent,
+  SellerInfo$SellerUserName,
+  SellerInfo$TopRatedSeller,
+  StoreInfo$StoreName,
+  StoreInfo$StoreURL,
   ShippingInfo$ShippingServiceCost$Amount,
   ShippingInfo$ShippingServiceCost$CurrencyId,
   ShippingInfo$ShippingType,
@@ -126,12 +155,14 @@ INSERT INTO table_eBay_cache_items(
   ReturnsAccepted,
   AutoPay
 )
-VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ON DUPLICATE KEY UPDATE 
   Title=VALUES(Title),
   GlobalId=VALUES(GlobalId),
   PrimaryCategory$CategoryID=VALUES(PrimaryCategory$CategoryID),
   PrimaryCategory$CategoryName=VALUES(PrimaryCategory$CategoryName),
+  SecondaryCategory$CategoryID=VALUES(SecondaryCategory$CategoryID),
+  SecondaryCategory$CategoryName=VALUES(SecondaryCategory$CategoryName),
   GalleryURL=VALUES(GalleryURL),
   GalleryPlusPictureURL=VALUES(GalleryPlusPictureURL),
   ViewItemURL=VALUES(ViewItemURL),
@@ -141,6 +172,13 @@ ON DUPLICATE KEY UPDATE
   Country=VALUES(Country),
   Condition$ConditionId=VALUES(Condition$ConditionId),
   Condition$ConditionDisplayName=VALUES(Condition$ConditionDisplayName),
+  SellerInfo$FeedbackRatingStar=VALUES(SellerInfo$FeedbackRatingStar),
+  SellerInfo$FeedbackScore=VALUES(SellerInfo$FeedbackScore),
+  SellerInfo$PositiveFeedbackPercent=VALUES(SellerInfo$PositiveFeedbackPercent),
+  SellerInfo$SellerUserName=VALUES(SellerInfo$SellerUserName),
+  SellerInfo$TopRatedSeller=VALUES(SellerInfo$TopRatedSeller),
+  StoreInfo$StoreName=VALUES(StoreInfo$StoreName),
+  StoreInfo$StoreURL=VALUES(StoreInfo$StoreURL),
   ShippingInfo$ShippingServiceCost$Amount=VALUES(ShippingInfo$ShippingServiceCost$Amount),
   ShippingInfo$ShippingServiceCost$CurrencyId=VALUES(ShippingInfo$ShippingServiceCost$CurrencyId),
   ShippingInfo$ShippingType=VALUES(ShippingInfo$ShippingType),
@@ -170,6 +208,8 @@ SELECT
   GlobalId,
   PrimaryCategory$CategoryID,
   PrimaryCategory$CategoryName,
+  SecondaryCategory$CategoryID,
+  SecondaryCategory$CategoryName,
   GalleryURL,
   GalleryPlusPictureURL,
   ViewItemURL,
@@ -179,6 +219,13 @@ SELECT
   Country,
   Condition$ConditionId,
   Condition$ConditionDisplayName,
+  SellerInfo$FeedbackRatingStar,
+  SellerInfo$FeedbackScore,
+  SellerInfo$PositiveFeedbackPercent,
+  SellerInfo$SellerUserName,
+  SellerInfo$TopRatedSeller,
+  StoreInfo$StoreName,
+  StoreInfo$StoreURL,
   ShippingInfo$ShippingServiceCost$Amount,
   ShippingInfo$ShippingServiceCost$CurrencyId,
   ShippingInfo$ShippingType,
@@ -322,6 +369,10 @@ func (c *dbCache) CacheItem(i *Item) (err os.Error) {
                 case "PrimaryCategory.CategoryParentID":
                 case "PrimaryCategory.AutoPayEnabled":
                 case "PrimaryCategory.BestOfferEnabled":
+                case "SecondaryCategory.CategoryLevel":
+                case "SecondaryCategory.CategoryParentID":
+                case "SecondaryCategory.AutoPayEnabled":
+                case "SecondaryCategory.BestOfferEnabled":
                 default:
                         fields = append(fields, named[i].Value)
                 }
@@ -339,6 +390,22 @@ func (c *dbCache) GetCategory(id string) (cat *Category, err os.Error) {
 
         cat = &Category{}
         err = RoughAssignQueryResult(cat, res)
+        return
+}
+
+// TODO: use category-filter to make projection
+func (c *dbCache) GetCategoriesByLevel(level int) (cats []*Category, err os.Error) {
+        res, err := c.exec(SQL_SELECT_CACHE_CATEGORY_ROW_BY + "CategoryLevel=? ORDER BY CategoryName", level)
+        if err != nil { return }
+
+        cats = make([]*Category, res.GetRowCount())
+
+        for i := 0; i < len(cats); i += 1 {
+                cats[i] = &Category{}
+                err = RoughAssignQueryResult(cats[i], res)
+                //if err != nil { return }
+        }
+        
         return
 }
 

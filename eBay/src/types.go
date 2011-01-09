@@ -47,6 +47,30 @@ type Money struct {
         CurrencyId string "attr" // USD, EUR, etc...
 }
 
+/*
+ FeedbackRatingStar values:
+        None            - No graphic displayed, feedback score 0-9.
+        Yellow          - Yellow Star, feedback score 10-49.
+        Blue            - Blue Star, feedback score 50-99.
+        Turquoise       - Turquoise Star, feedback score 100-499.
+        Purple          - Purple Star, feedback score 500-999.
+        Red             - Red Star, feedback score 1,000-4,999.
+        Green           - Green Star, feedback score 5,000-9,999.
+        YellowShooting  - Yellow Shooting Star, feedback score 10,000-24,999.
+        TurquoiseShooting - Turquoise Shooting Star, feedback score 25,000-49,999.
+        PurpleShooting  - Purple Shooting Star, feedback score 50,000-99,999.
+        RedShooting     - Red Shooting Star, feedback score 100,000-499,000 and above.
+        GreenShooting   - Green Shooting Star, feedback score 500,000-999,000 and above.
+        SilverShooting  - Silver Shooting Star, feedback score 1,000,000 or more.
+ */
+type SellerInfo struct {
+        FeedbackRatingStar string
+        FeedbackScore int
+        PositiveFeedbackPercent float
+        SellerUserName string
+        TopRatedSeller bool
+}
+
 type ShippingInfo struct {
         ShippingServiceCost Money
         ShippingType string // Flat, Air ...
@@ -73,6 +97,11 @@ type ListingInfo struct {
         Gift bool
 }
 
+type Storefront struct {
+        StoreName string
+        StoreURL string
+}
+
 type Condition struct {
         ConditionId string
         ConditionDisplayName string
@@ -93,6 +122,7 @@ type Item struct {
         Title string
         GlobalId string
         PrimaryCategory Category
+        SecondaryCategory Category
         GalleryURL string
         GalleryPlusPictureURL string
         ViewItemURL string
@@ -101,6 +131,8 @@ type Item struct {
         Location string
         Country string
         Condition Condition
+        SellerInfo SellerInfo
+        StoreInfo Storefront
         ShippingInfo ShippingInfo
         SellingStatus SellingStatus
         ListingInfo ListingInfo
@@ -113,9 +145,39 @@ type FindItemsResponse struct {
         Ack string
         Version string
         Timestamp string
-        SearchResult struct { Item []Item }
         ItemSearchURL string
         PaginationOutput PaginationOutput
+
+        ErrorMessage *struct{
+                Error []struct {
+                        Category string // see http://www.developer.ebay.com/DevZone/finding/CallRef/types/ErrorCategory.html
+                        Domain string
+                        ErrorId string
+                        ExceptionId string
+                        Message string
+                        Serverity string
+                        Subdomain string
+                }
+        }
+
+        SearchResult struct { Item []Item }
+}
+
+type FindItemsByCategoryResponse FindItemsResponse
+type FindItemsByKeywordsResponse FindItemsResponse
+
+func (resp *FindItemsByCategoryResponse) MakeXMLParseBuffer() (interface{}, os.Error) {
+        return &struct {
+                XMLName xml.Name "findItemsByCategoryResponse"
+                *FindItemsByCategoryResponse
+        }{ xml.Name{}, resp, }, nil
+}
+
+func (resp *FindItemsByKeywordsResponse) MakeXMLParseBuffer() (interface{}, os.Error) {
+        return &struct {
+                XMLName xml.Name "findItemsByKeywordsResponse"
+                *FindItemsByKeywordsResponse
+        }{ xml.Name{}, resp, }, nil
 }
 
 type GetCategoriesResponse struct {

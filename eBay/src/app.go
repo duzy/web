@@ -20,6 +20,7 @@ type Cacher interface {
         CacheCategory(cat *Category) (err os.Error)
         CacheItem(itm *Item) (err os.Error)
         GetCategory(id string) (cat *Category, err os.Error)
+        GetCategoriesByLevel(level int) (cats []*Category, err os.Error)
         GetItem(id string) (itm *Item, err os.Error)
 }
 
@@ -47,23 +48,27 @@ type eBayServiceCall interface {
         GetMessage(app *App) (io.Reader, int)
 }
 
-func NewApp(sandbox bool) (app *App) {
-        if sandbox {
+func NewApp() (app *App) {
+        if URL_eBayTrading == URL_eBayTradingSandbox {
+                // Sandbox
                 app = &App {
                 DEVID: "c5f14b63-0bf9-405f-8c5c-efaaba2b4a02",
                 AppID: "dusellco-da1b-434b-9d10-2448ee5fc58a",
                 CertID: "4d6382a0-aad7-4b93-92d1-4f558471c576",
                 UserToken: `AgAAAA**AQAAAA**aAAAAA**hXIgTQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4CoAZCCpA2dj6x9nY+seQ**xnMBAA**AAMAAA**s7Ft71dh0bgNFPn/VC3cGVUGv7B162v7Dq1lzTamuW/qLuycuUz4A4Io82+wv4ESB3DHXqywAirzNZ23cbWSzGccPnKe9yei6S433LhOpWHKimqztXvPnPFFQfiI6fJa/+Wfd4RAKjkGu0ymbi0tJ4WF1Xd50Iz9ZJxtHUNgkHM6qjnUe/q9SkY+cVoL25jFX6lyBzTUTklsKd/ASBLsFqItuUL45v7kpLAba/MqcNe35PFIGQ61nNKs+nAUNrE7mMizmAd0eXCsIhdtcC75fERplsvZGNxD+GudZMJjagWoUhIcD49yDvOVl9AmRqi72NjDiCTXqk8B2Hv/I/FMe4Ig5vVjRduzxR4AlwyxyP/ZhEqX951GEML2mCJiaGyNz+vlJYkFeccrxYE8QymmJ+iSABDZx8Qmcz8s7LFn++YBFoGjtLpMgOyzH/JSlbefpzh8JaaDFoE0P2u17e6/wEjfU9bjibBY5Evb2qFCEKjBorTB6U+fsf4ST8WZCWItHXbJjgyNsI3DmuOXkYTpKGj+HsnlKDuJmMPtmOrgkVXaBysH30u7WHyDYtAQNBE4s9Nr8DLhPemWK78y52layS2xzc/qFRtJnsWQ5AZeRNgJXx9M4PQZD36VqNFCMozHBKQB6HMNL/hx/DlkDs2likpYbr0ksSjBkCpnkfJCDCR9tVAityqW27sz4ukYkKKXGYynlqiuS0Ds6hnIwUQy2H2uwSnEz8oADfKfZzq07HKOyvV9CyhL8jHZFQ1Uwcl5`,
+
                 GlobalID: "EBAY-US",
                 ServiceVersion: "1.8.0",
                 ResponseFormat: "XML",
                 }
         } else {
+                // Production
                 app = &App {
                 DEVID: "c5f14b63-0bf9-405f-8c5c-efaaba2b4a02",
                 AppID: "dusellco-2abe-4ae8-8bc6-5fd8dc98b37e",
                 CertID: "87aab9ab-375c-41e5-bf14-9702fec7dec3",
-                UserToken: ``,
+                UserToken: `AgAAAA**AQAAAA**aAAAAA**KDUpTQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wCmIWgD5SCoQydj6x9nY+seQ**yAcBAA**AAMAAA**yFrepcL3pl+/OTnilLplQsDYL858GxNolQKn7ii2Q0+gW3lJ9GYPihBXhzZIyaaepwS+TIUgn7Hz7HET2rdS0oOpmOW7nqFWshMSusvumj43u4HJ+Q9y1UfkMYSRan6z8TtKkTYTDJXrubPYshnoMYX9dLckA4dEN0RhluNcw9RYDOB+8w44t57LwRSojexC8fXDoAd3cbV9+1Ytpr6xOKI3ZBRBWbOf5baxUSmOIakbWIr4SU1zCoXK4InDv4xrYLqPJEXYOcYjQZxvzbTFuW/rho3LHr8+Z3WMcaQLaQ6uyqv4KSTveyO6Nhv/Vt1/TbxNfU8G99SLBLTRkK58ZtQAd4iw4idgUFQyrNeq7gy3LnXc/guAug0tiGS6M77CRyxydNWsMSRv5ZTYg5Y8q16FWZ/zL2sXB/osmaR2epyZUSan2N268IfpBO6wDrmYn1E5g/CLiTenHLyuWw8/dBfwJ0Ef35T024/XkYY47EuHdc2Q5E2x9LCxltW2RRAG6XhXRMUJmqtx4OCHaMYNlTmVreJpZ/Hr3hxngciFDAaOq4KixQAOtH/Q7aKwDn5o/1bxU0qD23EK1jz0ohk/gTazVbn5mqK7e5P3pdg0+aFSTgcxaAg3FGITy8AVL/rwYvM88UQHL6Fo7EnabhVLs5OidJqDDsgnSnmi5WzdJAq+9gK9N5IDPncTca564+ZsmkhIuAE0v5/3NjkI7ZsHZDGrZnSInMwPyDxWmScF+R2GjmlJlrcK4cCWFG7hv+t5`,
+
                 GlobalID: "EBAY-US",
                 ServiceVersion: "1.8.0",
                 ResponseFormat: "XML",

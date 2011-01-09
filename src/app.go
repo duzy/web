@@ -347,6 +347,7 @@ func (app *App) Exec() (err os.Error) {
                 dbm.CloseAll() // close all databases
         }()
 
+        handled := false
         for k, h := range app.handlers {
                 if m, s := app.pathMatcher.PathMatch(k, app.Path()); m != PathMatchedNothing {
                         // TODO: rethink about the buffering performance
@@ -355,7 +356,7 @@ func (app *App) Exec() (err os.Error) {
 
                         if m == PathMatchedParent {
                                 sh, ok := h.(SubpathHandler)
-                                if !(ok && sh.HandleSubpath(s, app)) {
+                                if ok && !sh.HandleSubpath(s, app) {
                                         continue
                                 }
                         }
@@ -378,16 +379,41 @@ func (app *App) Exec() (err os.Error) {
                         
                         w.Write(headerBuffer.Bytes())
                         w.Write(contentBuffer.Bytes())
+                        handled = true
                         break // just ignore any other handlers
                 }
         }//for (app.handlers)
+
+        if !handled {
+                w := app.model.ResponseWriter()
+                fmt.Fprintf(w, "Content-Type: text/html; charset=utf-8\n\n")
+                fmt.Fprintf(w, `<html>`)
+                fmt.Fprintf(w, `<head>`)
+                fmt.Fprintf(w, `<meta http-equiv="content-type" content="text/html;charset=utf-8">`)
+                fmt.Fprintf(w, `</head>`)
+                fmt.Fprintf(w, `<body>`)
+                fmt.Fprintf(w, `<font color="red"><h1>Error: 404</h1></font>`)
+                fmt.Fprintf(w, `The requested URL <code>%s%s</code> was not found on this server`, app.ScriptName(), app.Path())
+                fmt.Fprintf(w, `<body>`)
+                fmt.Fprintf(w, `</html>`)
+        }
 
 finish:
         return
 }
 
 func (m DefaultPathMatcher) PathMatch(p1 string, p2 string) (n int, sub string) {
+        /* // debug helper code
+        defer func() {
+                if e := recover(); e != nil {
+                        panic(fmt.Sprintf("PathMatch: %s <=> %s, %v", p1, p2, e))
+                }
+        }()
+         */
+
         n = PathMatchedNothing
+
+        /*
         i := strings.Index(p2, p1) // find p1 in p2
         if i == 0 { // p1 is the prefix of p2
                 l := len(p2) - len(p1)
@@ -398,11 +424,29 @@ func (m DefaultPathMatcher) PathMatch(p1 string, p2 string) (n int, sub string) 
 
                         // For cases of: p1(/) <=> p2(/sync),
                         //               p1(/buy/a/) <=> p2(/buy/a/1)
-                        if p1[len(p1)-1:len(p1)] == "/" { sub = "/" }
+                        if len(p1) == 0 || p1[len(p1)-1:len(p1)] == "/" { sub = "/" }
 
                         sub += p2[len(p1):len(p1)+l]
                 } else if l < 0 {
                         // unmatched
+                }
+        }
+         */
+        if len(p1) <= len(p2) {
+                pre := p2[0:len(p1)]
+                if pre != p1 { /* matched nothing */ return }
+
+                l := len(p2)-len(p1)
+                if l == 0 {
+                        n = PathMatchedFull
+                } else {
+                        n = PathMatchedParent
+
+                        // For cases of: p1(/) <=> p2(/sync),
+                        //               p1(/buy/a/) <=> p2(/buy/a/1)
+                        if len(p1) == 0 || p1[len(p1)-1:len(p1)] == "/" { sub = "/" }
+
+                        sub += p2[len(p1):len(p1)+l]
                 }
         }
         return
