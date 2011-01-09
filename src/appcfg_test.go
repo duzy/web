@@ -25,9 +25,9 @@ func TestLoadAppConfig(t *testing.T) {
         d := cfg.Databases["dusell"]
         if d == nil { t.Error("no database 'dusell'") }
         check(t, d.Host, "localhost")
-        check(t, d.User, "test")
+        check(t, d.User, "dusellco_test")
         check(t, d.Password, "abc")
-        check(t, d.Database, "dusell")
+        check(t, d.Database, "dusellco_test")
 
         d = cfg.Databases["dusell_2"]
         if d == nil { t.Error("no database 'dusell_2'") }

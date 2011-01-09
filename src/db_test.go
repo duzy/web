@@ -6,7 +6,7 @@ import (
 
 func TestDatabase(t *testing.T) {
         db := NewDatabase()
-        err := db.Connect("localhost", "test", "abc", "dusell")
+        err := db.Connect("localhost", "dusellco_test", "abc", "dusellco_test")
         if err != nil { t.Error(err); goto finish }
         defer db.Close()
 

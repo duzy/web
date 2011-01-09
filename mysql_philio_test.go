@@ -12,17 +12,17 @@ import (
 
 func TestSimpleCreateInsertSelect(t *testing.T) {
         db := New()
-        db.Logging = false
-        db.Connect("localhost", "test", "abc", "dusell")
+        db.Logging = true
+        db.Connect("localhost", "dusellco_test", "abc", "dusellco_test")
         if db.Errno != 0 {
-                t.Error("Error", db.Errno, db.Error)
+                t.Errorf("Connect: [%d] %v", db.Errno, db.Error)
                 return
         }
         defer db.Close()
 
         db.Query("SET NAMES utf8")
         if db.Errno != 0 {
-                t.Error("Error", db.Errno, db.Error)
+                t.Errorf("Query: [%d] %v", db.Errno, db.Error)
                 return
         }
 
@@ -34,7 +34,7 @@ c TEXT
 )`
         db.Query(sql)
         if db.Errno != 0 {
-                t.Error("Error", db.Errno, db.Error)
+                t.Errorf("Query: [%d] %v", db.Errno, db.Error)
                 return
         }
 
@@ -44,13 +44,13 @@ INSERT INTO table_test(b,c) VALUES(?,?)
         stmt, _ := db.InitStmt()
         stmt.Prepare(sql)
         if stmt.Errno != 0 {
-                t.Error("Error", stmt.Errno, stmt.Error)
+                t.Errorf("Prepare: [%d] %v", stmt.Errno, stmt.Error)
                 return
         }
         stmt.BindParams("name", "long text should go here...")
         stmt.Execute()
         if stmt.Errno != 0 {
-                t.Error("Error", stmt.Errno, stmt.Error)
+                t.Errorf("Execute: [%d] %v", stmt.Errno, stmt.Error)
                 return
         }
         stmt.Close()
@@ -61,7 +61,7 @@ SELECT a, b, c FROM table_test LIMIT 10
 `
         res, _ := db.Query(sql)
         if db.Errno != 0 {
-                t.Error("Error", db.Errno, db.Error)
+                t.Errorf("Query: [%d] %v", db.Errno, db.Error)
                 return
         }
 
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS table_test_items(
 `
         db := New()
         db.Logging = false
-        err := db.Connect("localhost", "test", "abc", "dusell")
+        err := db.Connect("localhost", "dusellco_test", "abc", "dusellco_test")
         if db.Errno != 0 { t.Errorf("Connect: [%d] %s", db.Errno, db.Error); return }
         if err != nil { t.Error(err); return }
         defer db.Close()

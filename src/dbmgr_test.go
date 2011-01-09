@@ -7,9 +7,9 @@ import (
 func TestDBManager(t *testing.T) {
         var cfg = &DatabaseConfig {
         Host: "localhost",
-        User: "test",
+        User: "dusellco_test",
         Password: "abc",
-        Database: "dusell",
+        Database: "dusellco_test",
         }
 
         db, err := GetDBManager().GetDatabase(cfg)

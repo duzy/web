@@ -12,9 +12,9 @@ Location: "/tmp/web-test/PersisterFS",
 var configDB = &PersisterConfigDB{
         DatabaseConfig {
         Host: "localhost",
-        User: "test",
+        User: "dusellco_test",
         Password: "abc",
-        Database: "dusell",
+        Database: "dusellco_test",
         },
 }
 

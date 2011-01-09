@@ -18,9 +18,9 @@
         "databases": {
             "dusell": {
                 "host": "localhost",
-                "user": "test",
+                "user": "dusellco_test",
                 "password": "abc",
-                "database": "dusell"
+                "database": "dusellco_dusell"
             },
             "dusell_2": {
                 "host": "localhost",
