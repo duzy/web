@@ -12,7 +12,7 @@ import (
 
 func TestSimpleCreateInsertSelect(t *testing.T) {
         db := New()
-        db.Logging = true
+        db.Logging = false
         db.Connect("localhost", "dusellco_test", "abc", "dusellco_test")
         if db.Errno != 0 {
                 t.Errorf("Connect: [%d] %v", db.Errno, db.Error)
@@ -299,7 +299,7 @@ LIMIT 1
         q := strings.Replace(sql, "?", `"field 0"`, 1)
         res, err := db.Query(q)
         if err != nil { t.Errorf("Query: [%d] %s", stmt.Errno, stmt.Error); return }
-        fmt.Printf("%v\n", res)
+        fmt.Printf("result: %v\n", res)
 
         stmt, err = db.InitStmt()
         if err != nil { t.Errorf("InitStmt: [%d] %s", stmt.Errno, stmt.Error); return }
@@ -320,7 +320,7 @@ LIMIT 1
                 t.Errorf("Execute: [%d] %s", stmt.Errno, stmt.Error);
                 return
         } else {
-                fmt.Printf("%v\n", res)
+                fmt.Printf("result: %v\n", res)
         }
         //db.Logging = false
         //fmt.Printf("====.\n");
