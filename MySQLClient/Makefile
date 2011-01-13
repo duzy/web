@@ -4,7 +4,7 @@ include $(GOROOT)/src/Make.inc
 
 TARG=mysql
 CGOFILES=mysql.go
-GOFILES=const.go bound_data.go
+GOFILES=mysql_com.go
 MYSQL_CONFIG=$(shell which mysql_config)
 CGO_CFLAGS=$(shell $(MYSQL_CONFIG) --cflags)
 CGO_LDFLAGS=$(shell $(MYSQL_CONFIG) --libs_r)
