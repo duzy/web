@@ -20,6 +20,7 @@ go_files="
   src/app.go
   src/view.go
   src/cgi.go
+  src/fcgi.go
   src/sm.go
   src/dbmgr.go
   src/db.go
@@ -29,3 +30,10 @@ go_files="
 "
 
 build_pack web && build_testmain web
+
+## test app for FCGIModel
+go_tests=""
+go_files="fcgi_test.go"
+
+build_exe test.fcgi
+

@@ -3,6 +3,7 @@ package mysql
 import (
         "testing"
         "fmt"
+        "os"
 )
 
 var testStrings = []string{
@@ -160,4 +161,96 @@ func TestConnectQuery(t *testing.T) {
                         return
                 }
         }
+}
+
+func TestPreparedStatement(t *testing.T) {
+        conn, err := Open("localhost", "dusellco_test", "abc", "dusellco_test")
+        if err != nil {
+                t.Errorf("%s", err)
+                return
+        }
+
+        defer conn.Close()
+
+        rs, err := conn.Query(`CREATE TEMPORARY TABLE t(i INT, s VARCHAR(100));`)
+        if err != nil {
+                t.Errorf("%s", err)
+                return
+        }
+        if rs.NumFields != 0 {
+                t.Errorf("error: NumFields == %d (!=0)", rs.NumFields)
+                return
+        }
+        if rs.AffectedRows != 0 {
+                t.Errorf("error: AffectedRows == %d (!=0)", rs.AffectedRows)
+                return
+        }
+        rs.Free()
+
+        for i := 0; i < len(testStrings); i += 1 {
+                rs, err := conn.Query(fmt.Sprintf(`INSERT INTO t(i,s) VALUES(%d, "%s");`, i, testStrings[i]))
+                if err != nil {
+                        t.Errorf("%s", err)
+                        break;
+                }
+                if rs.NumFields != 0 {
+                        t.Errorf("error: INSERT: [%d] NumFields == %d (!=0)", i, rs.NumFields)
+                        break;
+                }
+                if rs.AffectedRows != 1 {
+                        t.Errorf("error: INSERT: [%d] AffectedRows == %d (!=1)", i, rs.AffectedRows)
+                        break;
+                }
+                rs.Free()
+        }
+
+        stmt, err := conn.Prepare(`SELECT * FROM t WHERE i >= ?  ORDER BY i;`)
+        if err != nil {
+                t.Errorf("%s", err)
+                return
+        }
+
+        if stmt == nil {
+                t.Errorf("conn.Prepare failed")
+                return
+        }
+
+        err = stmt.BindParams(0)
+        if err != nil {
+                t.Errorf("%s", err)
+                stmt.Close()
+                return
+        }
+
+        err = stmt.Execute()
+        if err != nil {
+                t.Errorf("%s", err)
+                stmt.Close()
+                return
+        }
+
+        if n := stmt.NumRows(); n != uint64(len(testStrings)) {
+                t.Errorf("NumRows: %d", n)
+                stmt.Close()
+                return
+        }
+
+        if n := stmt.AffectedRows(); n != uint64(len(testStrings)) /*0*/ {
+                t.Errorf("AffectedRows: %d", n)
+                stmt.Close()
+                return
+        }
+
+        for {
+                row, err := stmt.Fetch()
+                if err != nil {
+                        if err != os.EOF {
+                                t.Errorf("%v", err)
+                        }
+                        break
+                }
+                fmt.Printf("row: %v\n", row)
+        }
+
+        stmt.Close()
 }

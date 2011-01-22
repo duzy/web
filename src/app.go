@@ -5,7 +5,7 @@ import (
         "io"
         "fmt"
         "http"
-        "bytes"
+        //"bytes"
         "strings"
 )
 
@@ -38,15 +38,25 @@ type SubpathHandler interface {
 // Use FuncHandler to wrap a func as a web.Handler.
 type FuncHandler func(w io.Writer, app *App)
 
+type RequestProcessor interface {
+        ProcessRequest(req *Request) (err os.Error)
+}
+
 // Indicate a model of a app, e.g. CGIModel, FCGIModel, SCGIModel, etc.
 type AppModel interface {
-        RequestMethod() string
-        PathInfo() string
-        QueryString() string
-        ScriptName() string
-        HttpCookie() string
-        RequestReader() io.Reader // for reading data like POST messages
-        ResponseWriter() io.Writer
+        ProcessRequests(rp RequestProcessor) os.Error
+        GetRequest() *Request
+}
+
+type Request struct {
+        http.Request
+        session *Session
+}
+
+type Response struct {
+        http.Response
+        query map[string][]string
+        cookies []*Cookie
 }
 
 type Cookie struct {
@@ -63,12 +73,9 @@ type Cookie struct {
 type App struct {
         model AppModel
         config *AppConfig
-        session *Session
         handlers map[string]Handler
         pathMatcher PathMatcher
-        query map[string][]string
-        header map[string]string
-        cookies []*Cookie
+        requests []*Request
 }
 
 func (f FuncHandler) WriteContent(w io.Writer, app *App) {
@@ -175,12 +182,12 @@ func (app *App) initFromConfig(cfg *AppConfig) (err os.Error) {
 
         app.config = cfg
 
-        app.cookies = make([]*Cookie, 0)
+        //app.cookies = make([]*Cookie, 0)
         app.handlers = make(map[string]Handler)
-        app.header = make(map[string]string)
+        //app.header = make(map[string]string)
         app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
 
-        err = app.initSession()
+        //err = app.initSession()
 
         // TODO: init database
 finish:
@@ -189,15 +196,16 @@ finish:
 
 func (app *App) initFromModel(am AppModel) (err os.Error) {
         app.model = am
-        app.cookies = make([]*Cookie, 0)
+        //app.cookies = make([]*Cookie, 0)
         app.handlers = make(map[string]Handler)
-        app.header = make(map[string]string)
+        //app.header = make(map[string]string)
         app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
         app.config = newAppConfigForAppModel(app.model)
-        err = app.initSession()
+        //err = app.initSession()
         return
 }
 
+/*
 func (app *App) initSession() (err os.Error) {
         appScriptName := app.ScriptName()
 
@@ -248,9 +256,11 @@ func (app *App) initSession() (err os.Error) {
         //       cookies. Also for security reason?
         return
 }
+ */
 
 func (app *App) GetModel() AppModel { return app.model }
-func (app *App) Session() *Session { return app.session }
+//func (app *App) Session() *Session { return app.session }
+/*
 func (app *App) Method() string { return app.model.RequestMethod() }
 func (app *App) Path() string { return app.model.PathInfo() }
 func (app *App) ScriptName() string { return app.model.ScriptName() }
@@ -262,7 +272,7 @@ func (app *App) RawCookie() string { return app.model.HttpCookie() }
 func (app *App) Cookies() []*Cookie { return app.cookies }
 func (app *App) Cookie(k string) (rc *Cookie) {
         for _, c := range app.cookies {
-                if c.Name == k/* TODO: ignore cases? */ {
+                if c.Name == k {
                         rc = c
                 }
         }
@@ -275,6 +285,7 @@ func (app *App) SetHeader(k, v string) (prev string) {
         app.header[k] = v
         return
 }
+ */
 
 func (app *App) Handle(url string, h Handler) (prev Handler) {
         prev = app.handlers[url]
@@ -296,6 +307,7 @@ func (app *App) ReturnError(w io.Writer, err interface{}) {
         fmt.Fprintf(w, "error: %v", err)
 }
 
+/*
 func (app *App) writeHeader(w io.Writer) (err os.Error) {
         for _, v := range app.cookies {
                 // TODO: only Set-Cookie for 'changed' cookies, avoid for
@@ -312,6 +324,7 @@ func (app *App) writeHeader(w io.Writer) (err os.Error) {
         fmt.Fprintf(w, "\n")
         return
 }
+ */
 
 /**
  *  Get database via the name -- specified in the config file like this:
@@ -333,72 +346,77 @@ func (app *App) GetDatabase(name string) (db Database, err os.Error) {
 }
 
 func (app *App) Exec() (err os.Error) {
-        app.query, err = http.ParseQuery(app.model.QueryString())
-        if err != nil {
-                /* TODO: log error */
-                goto finish
-        }
+        err = app.model.ProcessRequests(app)
+        return
+}
 
-        defer func() {
-                if app.config == nil { error("config: <nil>") }
-                err = app.session.save(app.config.Persister)
+func (app *App) ProcessRequest(req *Request) (err os.Error) {
+//         app.query, err = http.ParseQuery(app.model.QueryString())
+//         if err != nil {
+//                 /* TODO: log error */
+//                 goto finish
+//         }
 
-                dbm := GetDBManager()
-                dbm.CloseAll() // close all databases
-        }()
+//         defer func() {
+//                 if app.config == nil { error("config: <nil>") }
+//                 err = app.session.save(app.config.Persister)
 
-        handled := false
-        for k, h := range app.handlers {
-                if m, s := app.pathMatcher.PathMatch(k, app.Path()); m != PathMatchedNothing {
-                        // TODO: rethink about the buffering performance
-                        contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
-                        contentBuffer.Reset()
+//                 dbm := GetDBManager()
+//                 dbm.CloseAll() // close all databases
+//         }()
 
-                        if m == PathMatchedParent {
-                                sh, ok := h.(SubpathHandler)
-                                if ok && !sh.HandleSubpath(s, app) {
-                                        continue
-                                }
-                        }
-                        h.WriteContent(contentBuffer, app)
+//         handled := false
+//         for k, h := range app.handlers {
+//                 if m, s := app.pathMatcher.PathMatch(k, app.Path()); m != PathMatchedNothing {
+//                         // TODO: rethink about the buffering performance
+//                         contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
+//                         contentBuffer.Reset()
 
-                        headerBuffer := bytes.NewBuffer(make([]byte, 1024))
-                        headerBuffer.Reset()
-                        err := app.writeHeader(headerBuffer)
-                        if err != nil { /*TODO: error */ goto finish }
+//                         if m == PathMatchedParent {
+//                                 sh, ok := h.(SubpathHandler)
+//                                 if ok && !sh.HandleSubpath(s, app) {
+//                                         continue
+//                                 }
+//                         }
+//                         h.WriteContent(contentBuffer, app)
 
-                        w := app.model.ResponseWriter()
+//                         headerBuffer := bytes.NewBuffer(make([]byte, 1024))
+//                         headerBuffer.Reset()
+//                         err := app.writeHeader(headerBuffer)
+//                         if err != nil { /*TODO: error */ goto finish }
 
-                        /*
-                        defer func() {
-                                if e := recover(); e != nil {
-                                        app.ReturnError(w, e)
-                                }
-                        }()
-                         */
+//                         w := app.model.ResponseWriter()
+
+//                         /*
+//                         defer func() {
+//                                 if e := recover(); e != nil {
+//                                         app.ReturnError(w, e)
+//                                 }
+//                         }()
+//                          */
                         
-                        w.Write(headerBuffer.Bytes())
-                        w.Write(contentBuffer.Bytes())
-                        handled = true
-                        break // just ignore any other handlers
-                }
-        }//for (app.handlers)
+//                         w.Write(headerBuffer.Bytes())
+//                         w.Write(contentBuffer.Bytes())
+//                         handled = true
+//                         break // just ignore any other handlers
+//                 }
+//         }//for (app.handlers)
 
-        if !handled {
-                w := app.model.ResponseWriter()
-                fmt.Fprintf(w, "Content-Type: text/html; charset=utf-8\n\n")
-                fmt.Fprintf(w, `<html>`)
-                fmt.Fprintf(w, `<head>`)
-                fmt.Fprintf(w, `<meta http-equiv="content-type" content="text/html;charset=utf-8">`)
-                fmt.Fprintf(w, `</head>`)
-                fmt.Fprintf(w, `<body>`)
-                fmt.Fprintf(w, `<font color="red"><h1>Error: 404</h1></font>`)
-                fmt.Fprintf(w, `The requested URL <code>%s%s</code> was not found on this server`, app.ScriptName(), app.Path())
-                fmt.Fprintf(w, `<body>`)
-                fmt.Fprintf(w, `</html>`)
-        }
+//         if !handled {
+//                 w := app.model.ResponseWriter()
+//                 fmt.Fprintf(w, "Content-Type: text/html; charset=utf-8\n\n")
+//                 fmt.Fprintf(w, `<html>`)
+//                 fmt.Fprintf(w, `<head>`)
+//                 fmt.Fprintf(w, `<meta http-equiv="content-type" content="text/html;charset=utf-8">`)
+//                 fmt.Fprintf(w, `</head>`)
+//                 fmt.Fprintf(w, `<body>`)
+//                 fmt.Fprintf(w, `<font color="red"><h1>Error: 404</h1></font>`)
+//                 fmt.Fprintf(w, `The requested URL <code>%s%s</code> was not found on this server`, app.ScriptName(), app.Path())
+//                 fmt.Fprintf(w, `<body>`)
+//                 fmt.Fprintf(w, `</html>`)
+//         }
 
-finish:
+// finish:
         return
 }
 

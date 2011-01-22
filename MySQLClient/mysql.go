@@ -2,7 +2,14 @@ package mysql
 
 /*
  #include <stdlib.h>
+ #include <string.h>
  #include <mysql.h>
+
+ short int      _conv_int16(void *p) { return *((short int*)p); }
+ int            _conv_int32(void *p) { return *((int*)p); }
+ long long int  _conv_int64(void *p) { return *((long long int*)p); }
+ float          _conv_float32(void *p) { return *((float*)p); }
+ double         _conv_float64(void *p) { return *((double*)p); }
 
  char *_field_value_at(MYSQL_ROW row, int i) { return row[i]; }
 
@@ -21,7 +28,25 @@ package mysql
  unsigned int _field_charsetnr(MYSQL_FIELD * f) { return f->charsetnr; }
  unsigned char _field_type(MYSQL_FIELD * f) { return (unsigned char)(f->type); }
 
- 
+ MYSQL_BIND *_bind_new(int count) {
+   MYSQL_BIND *binds = malloc(sizeof(MYSQL_BIND) * count);
+   memset(binds, 0, sizeof(MYSQL_BIND) * count);
+   return binds;
+ }
+ void _bind_delete(MYSQL_BIND *binds) { free(binds); }
+ void _bind_set(MYSQL_BIND *binds, int i,
+     enum enum_field_types type,
+     void *buf, unsigned long buflen,
+     void *len, void *nul, void *error)
+ {
+   binds[i].buffer_type = type;
+   binds[i].buffer = buf;
+   binds[i].buffer_length = buflen;
+   binds[i].length = (unsigned long *)len;
+   binds[i].is_null = (my_bool *)nul;
+   binds[i].error = (my_bool *)error;
+ }
+
  */
 import "C"
 
@@ -30,7 +55,7 @@ import (
         "sync"
         "unsafe"
         //"strconv"
-        //"fmt"
+        "fmt"
 )
 
 type Connection struct {
@@ -40,6 +65,9 @@ type Connection struct {
 
 type Statement struct {
         h *C.MYSQL_STMT
+
+        params []bind
+        result []bind
 }
 
 type ResultSet struct {
@@ -63,6 +91,146 @@ type Field struct {
         Decimals uint
         Charset uint
         Type FieldType //uint8
+}
+
+type bind struct {
+        buffer []byte;
+	buffer_type FieldType;
+        length int;
+        is_null [1]byte;
+        error [1]byte;
+}
+
+func (b *bind) makeBuffer(v interface{}) {
+        switch a := v.(type) {
+        case int:
+                l := unsafe.Sizeof(int(0))
+                b.buffer_type = FIELD_TYPE_LONG
+                b.buffer = make([]byte, l)
+                for i := uint(0); i < uint(l); i += 1 {
+                        b.buffer[i] = uint8((a >> (i*8)) & 0xFF)
+                }
+
+        case string:
+                b.buffer_type = FIELD_TYPE_STRING
+                b.buffer = []byte(a)
+        }
+}
+
+func (b *bind) makeBufferForField(field *C.MYSQL_FIELD) {
+        l := int(field.length)
+        b.buffer_type = FieldType(field._type)
+        switch b.buffer_type {
+        case FIELD_TYPE_DECIMAL:        l = unsafe.Sizeof(float64(0))
+        case FIELD_TYPE_TINY:           l = unsafe.Sizeof(int8(0))
+	case FIELD_TYPE_SHORT:          l = unsafe.Sizeof(int16(0))
+        case FIELD_TYPE_LONG:           l = unsafe.Sizeof(int(0))
+	case FIELD_TYPE_FLOAT:          l = unsafe.Sizeof(float(0))
+        case FIELD_TYPE_DOUBLE:         l = unsafe.Sizeof(float64(0))
+	case FIELD_TYPE_NULL:           //l = unsafe.Sizeof()
+        case FIELD_TYPE_TIMESTAMP:      //l = unsafe.Sizeof()
+	case FIELD_TYPE_LONGLONG:       l = unsafe.Sizeof(int64(0))
+        case FIELD_TYPE_INT24:          l = unsafe.Sizeof(int(0))
+	case FIELD_TYPE_DATE:           //l = unsafe.Sizeof()
+        case FIELD_TYPE_TIME:           //l = unsafe.Sizeof()
+	case FIELD_TYPE_DATETIME:       //l = unsafe.Sizeof()
+        case FIELD_TYPE_YEAR:           //l = unsafe.Sizeof()
+	case FIELD_TYPE_NEWDATE:        //l = unsafe.Sizeof()
+        case FIELD_TYPE_VARCHAR:        //l = unsafe.Sizeof()
+	case FIELD_TYPE_BIT:            //l = unsafe.Sizeof()
+        case FIELD_TYPE_NEWDECIMAL:     //l = unsafe.Sizeof()
+	case FIELD_TYPE_ENUM:           //l = unsafe.Sizeof()
+	case FIELD_TYPE_SET:            //l = unsafe.Sizeof()
+	case FIELD_TYPE_TINY_BLOB:      //l = unsafe.Sizeof()
+	case FIELD_TYPE_MEDIUM_BLOB:    //l = unsafe.Sizeof()
+	case FIELD_TYPE_LONG_BLOB:      //l = unsafe.Sizeof()
+	case FIELD_TYPE_BLOB:           //l = unsafe.Sizeof()
+	case FIELD_TYPE_VAR_STRING:     //l = unsafe.Sizeof()
+	case FIELD_TYPE_STRING:         //l = unsafe.Sizeof()
+	case FIELD_TYPE_GEOMETRY:       //l = unsafe.Sizeof()
+        }
+        if 0 < l {
+                b.buffer = make([]byte, l)
+        }
+}
+
+func (b *bind) set(binds *C.MYSQL_BIND, i int) {
+        bufptr := unsafe.Pointer(nil)
+        if 0 < len(b.buffer) {
+                bufptr = unsafe.Pointer(&b.buffer[0])
+        }
+        
+        C._bind_set(
+                binds, C.int(i),
+                uint32(b.buffer_type),
+                bufptr, C.ulong(len(b.buffer)),
+                unsafe.Pointer(&b.length),
+                unsafe.Pointer(&b.is_null),
+                unsafe.Pointer(&b.error))
+}
+
+func (b *bind) makeValue() (v interface{}, ok bool) {
+        //fmt.Printf("value: [%v] %v\n", b.buffer_type, b.buffer)
+        if len(b.buffer) <= 0 {
+                return
+        }
+
+        if b.is_null[0] == 1 {
+                v, ok =  nil, true
+                return
+        }
+
+        ptr := unsafe.Pointer(&b.buffer[0])
+
+        switch b.buffer_type {
+        case FIELD_TYPE_TINY:
+                if b.length == 1 {
+                        v, ok = uint8(b.buffer[0]), true
+                }
+	case FIELD_TYPE_SHORT:
+                if b.length == 2 {
+                        v, ok = int16(C._conv_int16(ptr)), true
+                }
+        case FIELD_TYPE_LONG:
+                if b.length == 4 {
+                        v, ok = int(C._conv_int32(ptr)), true
+                }
+	case FIELD_TYPE_LONGLONG:
+                if b.length == 8 {
+                        v, ok = int64(C._conv_int64(ptr)), true
+                }
+	case FIELD_TYPE_FLOAT:
+                if b.length == 4 {
+                        v, ok = float32(C._conv_float32(ptr)), true
+                }
+        case FIELD_TYPE_DECIMAL:        fallthrough
+        case FIELD_TYPE_NEWDECIMAL:     fallthrough
+        case FIELD_TYPE_DOUBLE:
+                if b.length == 8 {
+                        v, ok = float64(C._conv_float64(ptr)), true
+                }
+        case FIELD_TYPE_INT24:
+                if b.length == 3 {
+                        v, ok = int(C._conv_int32(ptr)), true
+                }
+
+	case FIELD_TYPE_VAR_STRING:     fallthrough
+	case FIELD_TYPE_STRING:         fallthrough
+        case FIELD_TYPE_VARCHAR:
+                if 0 < b.length {
+                        v, ok = string(b.buffer[0:b.length]), true
+                }
+
+                /*
+	case FIELD_TYPE_TINY_BLOB:      fallthrough
+	case FIELD_TYPE_MEDIUM_BLOB:    fallthrough
+	case FIELD_TYPE_LONG_BLOB:      fallthrough
+	case FIELD_TYPE_BLOB:           fallthrough
+                 */
+
+                // TODO: more types...
+        }
+        return
 }
 
 func newError(msg string) (err os.Error) {
@@ -150,6 +318,40 @@ func (conn *Connection) Query(sql string) (rs *ResultSet, err os.Error) {
 
         // TODO: must call C.mysql_free_result(unsafe.Pointer(res))
 
+        return
+}
+
+func (conn *Connection) Prepare(sql string) (stmt *Statement, err os.Error) {
+        cs := C.CString(sql)
+        conn.mtx.Lock()
+
+        defer func() {
+                conn.mtx.Unlock()
+                C.free(unsafe.Pointer(cs))
+        }()
+
+        stmt = &Statement{}
+        stmt.h = C.mysql_stmt_init(conn.h)
+        if stmt.h == nil {
+                err, stmt = conn.getLastError(), nil
+                if err == nil {
+                        err = os.NewError("mysql_stmt_init failed")
+                }
+                return
+        }
+        
+        rc := C.mysql_stmt_prepare(stmt.h, cs, C.ulong(C.strlen(cs)))
+        if rc != 0 {
+                err = stmt.getLastError()
+                if err == nil {
+                        err = os.NewError("mysql_stmt_prepare failed")
+                }
+
+                stmt.Close()
+                stmt = nil
+                return
+        }
+        
         return
 }
 
@@ -249,3 +451,196 @@ func (rs *ResultSet) ConvertRow(r []string) (row []interface{}, err os.Error) {
         }
         return
 }
+
+func (stmt *Statement) getLastError() os.Error {
+        if err := C.mysql_stmt_error(stmt.h); *err != 0 {
+                return os.NewError(C.GoString(err))
+        }
+        return nil
+}
+
+func (stmt *Statement) BindParams(params ...interface{}) (err os.Error) {
+        if stmt.h == nil {
+                err = os.NewError("Invalid statement!")
+                return
+        }
+
+        count := int(C.mysql_stmt_param_count(stmt.h))
+        if len(params) != count {
+                err = os.NewError("wrong number of parameters")
+                return
+        }
+
+        if count == 0 {
+                return
+        }
+
+        binds := C._bind_new(C.int(count))
+        defer func() {
+                C._bind_delete(binds)
+        }()
+
+        stmt.params = make([]bind, count)
+        
+        for i, a := range params {
+                stmt.params[i].makeBuffer(a)
+                if stmt.params[i].buffer == nil {
+                        err = os.NewError(fmt.Sprintf("Unsupported parameter type: ", a))
+                        return
+                }
+
+                stmt.params[i].set(binds, i)
+
+                rc := C.mysql_stmt_bind_param(stmt.h, binds)
+                if rc != 0 {
+                        err = stmt.getLastError()
+                        return
+                }
+        }
+        return
+}
+
+func (stmt *Statement) ParamCount() (n int) {
+        if stmt.h != nil {
+                n = int(C.mysql_stmt_param_count(stmt.h))
+        }
+        return
+}
+
+func (stmt *Statement) Execute() (err os.Error) {
+        if stmt.h == nil {
+                err = os.NewError("Invalid statement!")
+                return
+        }
+
+        rc := C.mysql_stmt_execute(stmt.h)
+        if rc != 0 {
+                err = stmt.getLastError()
+                return
+        }
+
+        meta := C.mysql_stmt_result_metadata(stmt.h)
+        if meta != nil {
+                if count := C.mysql_num_fields(meta); 0 < count {
+                        binds := C._bind_new(C.int(count))
+                        stmt.result = make([]bind, int(count))
+                        for i := C.uint(0); i < count; i += 1 {
+                                field := C.mysql_fetch_field_direct(meta, i)
+                                stmt.result[i].makeBufferForField(field)
+                                stmt.result[i].set(binds, int(i))
+                        }
+
+                        rc := C.mysql_stmt_bind_result(stmt.h, binds)
+                        if rc != 0 {
+                                err = stmt.getLastError()
+                                return
+                        }
+
+                        C._bind_delete(binds)
+                        C.mysql_free_result(meta)
+                }
+        }
+
+        rc = C.mysql_stmt_store_result(stmt.h)
+        if rc != 0 {
+                err = stmt.getLastError()
+                return
+        }
+
+        return
+}
+
+func (stmt *Statement) SQLState() (s string) {
+        if stmt.h != nil {
+                cs := C.mysql_stmt_sqlstate(stmt.h)
+                s = C.GoString(cs)
+        }
+        return
+}
+
+func (stmt *Statement) NumRows() (n uint64) {
+        if stmt.h != nil {
+                n = uint64(C.mysql_stmt_num_rows(stmt.h))
+        }
+        return
+}
+
+func (stmt *Statement) AffectedRows() (n uint64) {
+        if stmt.h != nil {
+                n = uint64(C.mysql_stmt_affected_rows(stmt.h))
+        }
+        return
+}
+
+func (stmt *Statement) Fetch() (row []interface{}, err os.Error) {
+        if stmt.h == nil {
+                err = os.NewError("Invalid statement!")
+                return
+        }
+
+        rc := C.mysql_stmt_fetch(stmt.h)
+
+        //fmt.Printf("result: [%d], %v\n", rc, stmt.result)
+
+        if rc != 0 {
+                if rc == 100 { // MYSQL_NO_DATA
+                        err = os.EOF
+                        return
+                } else if rc == 101 { // MYSQL_DATA_TRUNCATED
+                        // ...
+                } else {
+                        err = stmt.getLastError()
+                        return
+                }
+        }
+
+        if stmt.result != nil {
+                row = make([]interface{}, len(stmt.result))
+                for i := 0; i < len(stmt.result); i += 1 {
+                        row[i], _ = stmt.result[i].makeValue()
+                }
+        }
+        
+        return
+}
+
+func (stmt *Statement) Reset() (err os.Error) {
+        if stmt.h == nil {
+                err = os.NewError("Invalid statement!")
+                return
+        }
+
+        rc := C.mysql_stmt_reset(stmt.h)
+        if rc != 0 {
+                err = stmt.getLastError()
+                return
+        }
+
+        return
+}
+
+func (stmt *Statement) Close() (err os.Error) {
+        if stmt.h == nil {
+                err = os.NewError("Invalid statement!")
+                return
+        }
+
+        rc := C.mysql_stmt_free_result(stmt.h)
+        if rc != 0 {
+                err = stmt.getLastError()
+                // NOTE: don't return here
+        }
+
+        rc = C.mysql_stmt_close(stmt.h)
+        stmt.h = nil
+        stmt.params = nil
+        stmt.result = nil
+
+        if rc != 0 {
+                err = stmt.getLastError()
+                return
+        }
+
+        return
+}
+

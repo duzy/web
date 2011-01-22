@@ -1,6 +1,9 @@
 package mysql
 
-import "strconv"
+import (
+        "strconv"
+        "fmt"
+)
 
 type FieldType uint8
 type FieldFlag uint
@@ -111,6 +114,40 @@ func (t FieldType) convert(s string, flags FieldFlags) (v interface{}) {
 	case FIELD_TYPE_STRING:
 	case FIELD_TYPE_GEOMETRY:
                 */
+        }
+        return
+}
+
+func (t FieldType) String() (s string) {
+        switch t {
+        case FIELD_TYPE_DECIMAL:        s = "FIELD_TYPE_DECIMAL"
+        case FIELD_TYPE_TINY:           s = "FIELD_TYPE_TINY"
+	case FIELD_TYPE_SHORT:          s = "FIELD_TYPE_SHORT"
+        case FIELD_TYPE_LONG:           s = "FIELD_TYPE_LONG"
+	case FIELD_TYPE_FLOAT:          s = "FIELD_TYPE_FLOAT"
+        case FIELD_TYPE_DOUBLE:         s = "FIELD_TYPE_DOUBLE"
+	case FIELD_TYPE_NULL:           s = "FIELD_TYPE_NULL"
+        case FIELD_TYPE_TIMESTAMP:      s = "FIELD_TYPE_TIMESTAMP"
+	case FIELD_TYPE_LONGLONG:       s = "FIELD_TYPE_LONGLONG"
+        case FIELD_TYPE_INT24:          s = "FIELD_TYPE_INT24"
+	case FIELD_TYPE_DATE:           s = "FIELD_TYPE_DATE"
+        case FIELD_TYPE_TIME:           s = "FIELD_TYPE_TIME"
+	case FIELD_TYPE_DATETIME:       s = "FIELD_TYPE_DATETIME"
+        case FIELD_TYPE_YEAR:           s = "FIELD_TYPE_YEAR"
+	case FIELD_TYPE_NEWDATE:        s = "FIELD_TYPE_NEWDATE"
+        case FIELD_TYPE_VARCHAR:        s = "FIELD_TYPE_VARCHAR"
+	case FIELD_TYPE_BIT:            s = "FIELD_TYPE_BIT"
+        case FIELD_TYPE_NEWDECIMAL:     s = "FIELD_TYPE_NEWDECIMAL"
+	case FIELD_TYPE_ENUM:           s = "FIELD_TYPE_ENUM"
+	case FIELD_TYPE_SET:            s = "FIELD_TYPE_SET"
+	case FIELD_TYPE_TINY_BLOB:      s = "FIELD_TYPE_TINY_BLOB"
+	case FIELD_TYPE_MEDIUM_BLOB:    s = "FIELD_TYPE_MEDIUM_BLOB"
+	case FIELD_TYPE_LONG_BLOB:      s = "FIELD_TYPE_LONG_BLOB"
+	case FIELD_TYPE_BLOB:           s = "FIELD_TYPE_BLOB"
+	case FIELD_TYPE_VAR_STRING:     s = "FIELD_TYPE_VAR_STRING"
+	case FIELD_TYPE_STRING:         s = "FIELD_TYPE_STRING"
+	case FIELD_TYPE_GEOMETRY:       s = "FIELD_TYPE_GEOMETRY"
+        default: s = fmt.Sprintf("FieldType(%d)", uint8(t))
         }
         return
 }
