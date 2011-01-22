@@ -2,26 +2,37 @@ package main
 
 import (
         "./_obj/web"
-        "io"
+        //"io"
+        "os"
         "fmt"
 )
 
 var counter = 0
 
-func hello(w io.Writer, app *web.App) {
+func hello(request *web.Request, response *web.Response) (err os.Error) {
         counter += 1
-        app.SetHeader("Content-Type", "text/html")
-        fmt.Fprintf(w, "<b>test</b>: <small>num=%d</small>\n", counter)
+        response.Header["Content-Type"] = "text/html"
+        fmt.Fprintf(response.BodyWriter, "<b>test</b>: <small>num=%d</small>\n", counter)
 
-        s := app.Session().Get("test")
-        fmt.Fprintf(w, "test: %s\n", s)
+        if request.Session() == nil {
+                fmt.Fprintf(response.BodyWriter, "request.Session() == nil\n")
+                return
+        }
+
+        s := request.Session().Get("test")
+        fmt.Fprintf(response.BodyWriter, "test: %s\n", s)
 
         s = fmt.Sprintf("%s%d", s, counter)
-        app.Session().Set("test", s)
+        request.Session().Set("test", s)
+        return
 }
 
 func main() {
-        app := web.NewApp(web.NewFCGIModel())
+        app, err := web.NewApp(web.NewFCGIModel())
+        if err != nil {
+                // ...
+        }
+
         app.HandleDefault(web.FuncHandler(hello))
         app.Exec()
 }

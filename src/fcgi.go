@@ -10,13 +10,14 @@ import (
         "log"
         "syscall"
         "encoding/binary"
+        "runtime"
 )
 
 type FCGIModel struct {
         params map[string]string
 }
 
-func NewFCGIModel() (am *AppModel) {
+func NewFCGIModel() (am AppModel) {
         m := &FCGIModel{}
         am = AppModel(m)
         return
@@ -284,9 +285,69 @@ func parseParams(b []byte) (params map [string]string) {
         return
 }
 
-var counter = 0
+func printErrorCallStack(err interface{}, str io.Writer) {
+        stack := make([]uintptr, 30)
 
-func (fcgi *FCGIModel) processSession(rp RequestProcessor, logger *log.Logger, fd int) {
+        n := runtime.Callers(0, stack)
+        stack = stack[0:n]
+
+        fmt.Fprintf(str, "Content-Type: text/html; charset=utf-8\n\n")
+        fmt.Fprintf(str, `<font color="red"><b>%v</b></font><p>`, err)
+        for _, pc := range stack {
+                f := runtime.FuncForPC(pc)
+                if f != nil {
+                        file, line := f.FileLine(pc)
+                        fmt.Fprintf(str, `%s:%d: <font color="red">%s</font><br/>`, file, line, f.Name())
+                }
+        }
+        fmt.Fprintf(str, `</p>`)
+}
+
+func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, logger *log.Logger, h *RecordHeader) (err os.Error) {
+        logger.Printf("sending result: %v\n", h.RequestId)
+
+        hh := &RecordHeader{
+        Version: h.Version,
+        Type: FCGI_STDOUT,
+        RequestId: h.RequestId,
+        ContentLength: 0,
+        PaddingLength: 0,
+        }
+
+        defer func() {
+                if err := recover(); err != nil {
+                        str := bytes.NewBuffer(make([]byte, 0, 2048))
+                        printErrorCallStack(err, str)
+                        hh.ContentLength = uint16(str.Len())
+                        if err = binary.Write(out, binary.BigEndian, hh); err != nil { return }
+                        if _, err = io.WriteString(out, str.String()); err != nil { return }
+                }
+        }()
+                
+        var request *Request
+        request, err = rm.GetRequest(fmt.Sprintf("%v", uint16(h.RequestId)))
+        if err == nil && request != nil {
+                var response *Response
+                response, err = rm.ProcessRequest(request)
+                if err == nil && response != nil {
+                        str := bytes.NewBuffer(make([]byte, 0, 2048))
+                        if err = response.writeHeader(str); err != nil { return }
+                        if _, err = fmt.Fprint(str, response.Body); err != nil { return }
+                        logger.Printf("result:\n%v", str)
+                        logger.Printf("result:==========\n")
+
+                        hh.ContentLength = uint16(str.Len())
+                        if err = binary.Write(out, binary.BigEndian, hh); err != nil { return }
+                        if _, err = fmt.Fprint(out, str); err != nil { return }
+                }
+        } else {
+                panic(fmt.Sprintf("<b>unknown request</b>: %v", h.RequestId))
+        }
+
+        return
+}
+
+func (fcgi *FCGIModel) processSession(rm RequestManager, logger *log.Logger, fd int) {
         //logger.Printf("FCGI_WEB_SERVER_ADDRS: %s\n", os.Getenv("FCGI_WEB_SERVER_ADDRS"))
 
         f := os.NewFile(fd, "FCGI_LISTENSOCK_FILENO")
@@ -331,38 +392,22 @@ func (fcgi *FCGIModel) processSession(rp RequestProcessor, logger *log.Logger, f
                         }
                 case FCGI_STDIN:
                         if h.ContentLength == uint16(0) {
-                                out := bufio.NewWriter(f)
-                                {
-                                        counter += 1
-                                        str := bytes.NewBuffer(make([]byte, 0, 2048))
-                                        fmt.Fprintf(str, "Content-Type: text/html\n\n")
-                                        fmt.Fprintf(str, "<b>test</b>, num=%d", counter)
-                                        hh := &RecordHeader{
-                                        Version: h.Version,
-                                        Type: FCGI_STDOUT,
-                                        RequestId: h.RequestId,
-                                        ContentLength: uint16(str.Len()),
-                                        PaddingLength: 0,
-                                        }
-                                        if err = binary.Write(out, binary.BigEndian, hh); err != nil { return }
-                                        if _, err = io.WriteString(out, str.String()); err != nil { return }
+                                fcgi.sendResult(f, rm, logger, h)
+
+                                hh := &RecordHeader{
+                                Version: h.Version,
+                                Type: FCGI_END_REQUEST,
+                                RequestId: h.RequestId,
+                                ContentLength: 8,
+                                PaddingLength: 0,
                                 }
-                                {
-                                        hh := &RecordHeader{
-                                        Version: h.Version,
-                                        Type: FCGI_END_REQUEST,
-                                        RequestId: h.RequestId,
-                                        ContentLength: 8,
-                                        PaddingLength: 0,
-                                        }
-                                        er := &EndRequestBody{
-                                        AppStatus: 0,
-                                        ProtocolStatus: FCGI_REQUEST_COMPLETE,
-                                        }
-                                        if err = binary.Write(out, binary.BigEndian, hh); err != nil { return }
-                                        if err = binary.Write(out, binary.BigEndian, er); err != nil { return }
+                                er := &EndRequestBody{
+                                AppStatus: 0,
+                                ProtocolStatus: FCGI_REQUEST_COMPLETE,
                                 }
-                                out.Flush()
+                                if err = binary.Write(f, binary.BigEndian, hh); err != nil { return }
+                                if err = binary.Write(f, binary.BigEndian, er); err != nil { return }
+
                                 logger.Printf("request ended\n")
                         } else {
                                 logger.Printf("TODO: obtain data from the web server\n")
@@ -374,7 +419,7 @@ func (fcgi *FCGIModel) processSession(rp RequestProcessor, logger *log.Logger, f
         }
 }
 
-func (fcgi *FCGIModel) ProcessRequests(rp RequestProcessor) (err os.Error) {
+func (fcgi *FCGIModel) ProcessRequests(rm RequestManager) (err os.Error) {
         logFile, _ := os.Open("/tmp/a.go.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
         logger := log.New(logFile, "", log.Lshortfile|log.Ltime)
 
@@ -391,11 +436,7 @@ func (fcgi *FCGIModel) ProcessRequests(rp RequestProcessor) (err os.Error) {
 
                 logger.Printf("Accepted: <%v>\n", fd)
 
-                go fcgi.processSession(rp, logger, fd)
+                go fcgi.processSession(rm, logger, fd)
         }
-}
-
-func (fcgi *FCGIModel) GetRequest() (req *Request) {
-        // TODO: ...
         return
 }

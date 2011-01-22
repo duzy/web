@@ -5,7 +5,7 @@ import (
         "io"
         "fmt"
         "http"
-        //"bytes"
+        "bytes"
         "strings"
 )
 
@@ -27,35 +27,44 @@ type PathMatcher interface {
 type DefaultPathMatcher int
 
 // Make response to a request.
-type Handler interface {
-        WriteContent(w io.Writer, app *App) // TODO: returns error
+type RequestHandler interface {
+        Handle(request *Request, response *Response) (err os.Error)
 }
 
 type SubpathHandler interface {
-        HandleSubpath(subpath string, app *App) bool
+        HandleSubpath(subpath string, request *Request) bool
 }
 
 // Use FuncHandler to wrap a func as a web.Handler.
-type FuncHandler func(w io.Writer, app *App)
+type FuncHandler func(request *Request, response *Response) (err os.Error)
 
-type RequestProcessor interface {
-        ProcessRequest(req *Request) (err os.Error)
+type RequestManager interface {
+        GetRequest(id string) (request *Request, err os.Error)
+        ProcessRequest(req *Request) (response *Response, err os.Error)
 }
 
 // Indicate a model of a app, e.g. CGIModel, FCGIModel, SCGIModel, etc.
 type AppModel interface {
-        ProcessRequests(rp RequestProcessor) os.Error
-        GetRequest() *Request
+        ProcessRequests(rp RequestManager) os.Error
 }
 
 type Request struct {
         http.Request
+
+        Path string
+        ScriptName string
+        QueryString string
+        
+        app *App
         session *Session
+        cookies []*Cookie
+        query map[string][]string // parsed query
 }
 
 type Response struct {
         http.Response
-        query map[string][]string
+        BodyWriter io.Writer
+        app *App
         cookies []*Cookie
 }
 
@@ -73,14 +82,20 @@ type Cookie struct {
 type App struct {
         model AppModel
         config *AppConfig
-        handlers map[string]Handler
+        handlers map[string]RequestHandler
         pathMatcher PathMatcher
         requests []*Request
 }
 
-func (f FuncHandler) WriteContent(w io.Writer, app *App) {
-        f(w, app)
+type noCloseReader struct { io.Reader }
+
+func (c noCloseReader) Close() os.Error { return nil }
+
+func (f FuncHandler) Handle(request *Request, response *Response) (err os.Error) {
+        return f(request, response)
 }
+
+func (req *Request) Session() *Session { return req.session; }
 
 func (c *Cookie) String() string {
         s := ""
@@ -183,7 +198,7 @@ func (app *App) initFromConfig(cfg *AppConfig) (err os.Error) {
         app.config = cfg
 
         //app.cookies = make([]*Cookie, 0)
-        app.handlers = make(map[string]Handler)
+        app.handlers = make(map[string]RequestHandler)
         //app.header = make(map[string]string)
         app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
 
@@ -197,7 +212,7 @@ finish:
 func (app *App) initFromModel(am AppModel) (err os.Error) {
         app.model = am
         //app.cookies = make([]*Cookie, 0)
-        app.handlers = make(map[string]Handler)
+        app.handlers = make(map[string]RequestHandler)
         //app.header = make(map[string]string)
         app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
         app.config = newAppConfigForAppModel(app.model)
@@ -287,13 +302,13 @@ func (app *App) SetHeader(k, v string) (prev string) {
 }
  */
 
-func (app *App) Handle(url string, h Handler) (prev Handler) {
+func (app *App) Handle(url string, h RequestHandler) (prev RequestHandler) {
         prev = app.handlers[url]
         app.handlers[url] = h
         return
 }
 
-func (app *App) HandleDefault(h Handler) (prev Handler) {
+func (app *App) HandleDefault(h RequestHandler) (prev RequestHandler) {
         prev = app.handlers[""]
         app.handlers[""] = h
         if app.handlers["/"] == nil {
@@ -307,9 +322,8 @@ func (app *App) ReturnError(w io.Writer, err interface{}) {
         fmt.Fprintf(w, "error: %v", err)
 }
 
-/*
-func (app *App) writeHeader(w io.Writer) (err os.Error) {
-        for _, v := range app.cookies {
+func (res *Response) writeHeader(w io.Writer) (err os.Error) {
+        for _, v := range res.cookies {
                 // TODO: only Set-Cookie for 'changed' cookies, avoid for
                 //       browser returned cookies eg the 'session' cookie.
                 if v.changed {
@@ -317,14 +331,13 @@ func (app *App) writeHeader(w io.Writer) (err os.Error) {
                 }
         }
 
-        for k, v := range app.header {
+        for k, v := range res.Header {
                 fmt.Fprintf(w, "%s: %s\n", k, v)
         }
 
         fmt.Fprintf(w, "\n")
         return
 }
- */
 
 /**
  *  Get database via the name -- specified in the config file like this:
@@ -346,77 +359,88 @@ func (app *App) GetDatabase(name string) (db Database, err os.Error) {
 }
 
 func (app *App) Exec() (err os.Error) {
+        defer func() {
+                dbm := GetDBManager()
+                dbm.CloseAll() // close all databases
+        }()
+
         err = app.model.ProcessRequests(app)
+        if err != nil {
+                // ....
+        }
         return
 }
 
-func (app *App) ProcessRequest(req *Request) (err os.Error) {
-//         app.query, err = http.ParseQuery(app.model.QueryString())
-//         if err != nil {
-//                 /* TODO: log error */
-//                 goto finish
-//         }
+func (app *App) GetRequest(id string) (request *Request, err os.Error) {
+        // TODO: multiple requests management
+        request = &Request{}
+        request.app = app
+        return
+}
 
-//         defer func() {
-//                 if app.config == nil { error("config: <nil>") }
-//                 err = app.session.save(app.config.Persister)
+func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) {
+        defer func() {
+                if app.config == nil { error("config: <nil>") }
+                if req.session != nil {
+                        err = req.session.save(app.config.Persister)
+                }
+        }()
 
-//                 dbm := GetDBManager()
-//                 dbm.CloseAll() // close all databases
-//         }()
+        req.query, err = http.ParseQuery(req.QueryString)
+        if err != nil {
+                /* TODO: log error */
+                return
+        }
 
-//         handled := false
-//         for k, h := range app.handlers {
-//                 if m, s := app.pathMatcher.PathMatch(k, app.Path()); m != PathMatchedNothing {
-//                         // TODO: rethink about the buffering performance
-//                         contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
-//                         contentBuffer.Reset()
+        contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
+        contentBuffer.Reset()
 
-//                         if m == PathMatchedParent {
-//                                 sh, ok := h.(SubpathHandler)
-//                                 if ok && !sh.HandleSubpath(s, app) {
-//                                         continue
-//                                 }
-//                         }
-//                         h.WriteContent(contentBuffer, app)
+        body := noCloseReader{ contentBuffer }
 
-//                         headerBuffer := bytes.NewBuffer(make([]byte, 1024))
-//                         headerBuffer.Reset()
-//                         err := app.writeHeader(headerBuffer)
-//                         if err != nil { /*TODO: error */ goto finish }
+        response = &Response{}
+        response.app = app
+        response.cookies = make([]*Cookie, 0, 8)
+        response.Header = make(map[string]string)
+        response.BodyWriter = contentBuffer
+        response.Body = body
 
-//                         w := app.model.ResponseWriter()
+        handled := false
+        for k, h := range app.handlers {
+                if m, s := app.pathMatcher.PathMatch(k, req.Path); m != PathMatchedNothing {
+                        if m == PathMatchedParent {
+                                sh, ok := h.(SubpathHandler)
+                                if ok && !sh.HandleSubpath(s, req) {
+                                        continue
+                                }
+                        }
+                        err = h.Handle(req, response)
+                        if err != nil {
+                                // TODO: error handling...
+                                return
+                        }
 
-//                         /*
-//                         defer func() {
-//                                 if e := recover(); e != nil {
-//                                         app.ReturnError(w, e)
-//                                 }
-//                         }()
-//                          */
-                        
-//                         w.Write(headerBuffer.Bytes())
-//                         w.Write(contentBuffer.Bytes())
-//                         handled = true
-//                         break // just ignore any other handlers
-//                 }
-//         }//for (app.handlers)
+                        response.ContentLength = int64(contentBuffer.Len())
 
-//         if !handled {
-//                 w := app.model.ResponseWriter()
-//                 fmt.Fprintf(w, "Content-Type: text/html; charset=utf-8\n\n")
-//                 fmt.Fprintf(w, `<html>`)
-//                 fmt.Fprintf(w, `<head>`)
-//                 fmt.Fprintf(w, `<meta http-equiv="content-type" content="text/html;charset=utf-8">`)
-//                 fmt.Fprintf(w, `</head>`)
-//                 fmt.Fprintf(w, `<body>`)
-//                 fmt.Fprintf(w, `<font color="red"><h1>Error: 404</h1></font>`)
-//                 fmt.Fprintf(w, `The requested URL <code>%s%s</code> was not found on this server`, app.ScriptName(), app.Path())
-//                 fmt.Fprintf(w, `<body>`)
-//                 fmt.Fprintf(w, `</html>`)
-//         }
+                        handled = true
+                        break // just ignore any other handlers
+                }
+        }//for (app.handlers)
 
-// finish:
+        if !handled {
+                contentBuffer.Reset()
+                w := contentBuffer
+                fmt.Fprintf(w, "Content-Type: text/html; charset=utf-8\n\n")
+                fmt.Fprintf(w, `<html>`)
+                fmt.Fprintf(w, `<head>`)
+                fmt.Fprintf(w, `<meta http-equiv="content-type" content="text/html;charset=utf-8">`)
+                fmt.Fprintf(w, `</head>`)
+                fmt.Fprintf(w, `<body>`)
+                fmt.Fprintf(w, `<font color="red"><h1>Error: 404</h1></font>`)
+                fmt.Fprintf(w, `The requested URL <code>%s%s</code> was not found on this server`, req.ScriptName, req.Path)
+                fmt.Fprintf(w, `<body>`)
+                fmt.Fprintf(w, `</html>`)
+        }
+
         return
 }
 

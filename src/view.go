@@ -1,10 +1,10 @@
 package web
 
 import (
-        "io"
+        //"io"
         "io/ioutil"
         "bytes"
-        //"os"
+        "os"
         //"fmt"
         "template"
 )
@@ -16,8 +16,8 @@ type View struct {
 
 // Make views all Stringer.
 type HandlerStringer struct {
-        Handler
-        app *App
+        RequestHandler
+        response *Response
 }
 
 // A ViewModel is a true implementation of a web view.
@@ -44,17 +44,17 @@ type StandardView struct {
 }
 
 // Produce a new web view(a web.Handler).
-func NewView(a interface{}) (h Handler) {
+func NewView(a interface{}) (h RequestHandler) {
         switch t := a.(type) {
         case ViewModel:
-                h = Handler(&View{ t })
+                h = RequestHandler(&View{ t }) // TODO: using ViewRoot to act as a RequestHandler
         case TemplateString, TemplateFile, string:
                 h = NewStandardView(t)
         }
         return
 }
 
-func NewStandardView(a interface{}) (h Handler) {
+func NewStandardView(a interface{}) (h RequestHandler) {
         var g TemplateGetter
         switch t := a.(type) {
         case TemplateString:
@@ -69,18 +69,18 @@ func NewStandardView(a interface{}) (h Handler) {
                 g,
                 make(StandardFields),
         })
-        h = Handler(&View{ m })
+        h = RequestHandler(&View{ m })
         return
 }
 
-func NewStringer(a interface{}, app *App) (hs *HandlerStringer) {
+func NewStringer(a interface{}, response *Response) (hs *HandlerStringer) {
         switch t := a.(type) {
-        case Handler:
-                hs = &HandlerStringer{ t, app, }
+        case RequestHandler:
+                hs = &HandlerStringer{ t, response, }
         case *View:
-                hs = &HandlerStringer{ Handler(t), app, }
+                hs = &HandlerStringer{ RequestHandler(t), response, }
         case ViewModel:
-                hs = &HandlerStringer{ NewView(a), app, }
+                hs = &HandlerStringer{ NewView(a), response, }
         }
         return
 }
@@ -94,31 +94,31 @@ func TemplateFileGetter(s string) TemplateGetter {
 }
 
 
-func (v *View) HandleSubpath(subpath string, app *App) (handled bool) {
+func (v *View) HandleSubpath(subpath string, request *Request) (handled bool) {
         if sh, ok := v.model.(SubpathHandler); ok {
-                handled = sh.HandleSubpath(subpath, app)
+                handled = sh.HandleSubpath(subpath, request)
         }
         return
 }
 
-func (v *View) WriteContent(w io.Writer, app *App) {
-        app.SetHeader("Content-Type", "text/html")
+func (v *View) Handle(request *Request, response *Response) (err os.Error) {
+        response.Header["Content-Type"] = "text/html"
 
         temp := v.model.GetTemplate()
         if temp == "" { goto finish }
 
         t, err := template.Parse(temp, nil/* TODO: make use of it? */)
-        if err != nil { app.ReturnError(w, err); goto finish }
+        if err != nil { response.app.ReturnError(response.content, err); goto finish }
 
         var f interface{}
         if fm, ok := v.model.(FieldsMaker); ok {
-                f = fm.MakeFields(app)
+                f = fm.MakeFields(response.app)
         } else {
                 f = v.model
         }
 
-        err = t.Execute( f, w )
-        if err != nil { app.ReturnError(w, err); goto finish }
+        err = t.Execute( f, response.content )
+        if err != nil { response.app.ReturnError(response.content, err); goto finish }
 
 finish:
         return
@@ -127,7 +127,7 @@ finish:
 func (vs *HandlerStringer) String() string {
         // TODO: handle with the case of 'app == nil'
         buf := bytes.NewBuffer(make([]byte, 0))
-        vs.Handler.WriteContent(buf, vs.app)
+        vs.RequestHandler.Handle(buf, vs.response)
         return string(buf.Bytes())
 }
 

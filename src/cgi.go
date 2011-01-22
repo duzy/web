@@ -6,7 +6,9 @@ import (
         "fmt"
         "runtime"
         "http"
-        "net"
+        "strconv"
+        "strings"
+        //"net"
 )
 
 // Implements AppModel for CGI web.App.
@@ -22,13 +24,17 @@ func parseHTTPVersion(vers string) (int, int, bool) {
 	if len(vers) < 5 || vers[0:5] != "HTTP/" {
 		return 0, 0, false
 	}
-	major, i, ok := atoi(vers, 5)
-	if !ok || i >= len(vers) || vers[i] != '.' {
+	major, err := strconv.Atoi(vers[5:])
+	if err != nil {
 		return 0, 0, false
 	}
+        i := strings.Index(vers[5:], ".")
+        if i <= 0 {
+                return 0, 0, false
+        }
 	var minor int
-	minor, i, ok = atoi(vers, i+1)
-	if !ok || i != len(vers) {
+	minor, err = strconv.Atoi(vers[i+1:])
+	if err != nil {
 		return 0, 0, false
 	}
 	return major, minor, true
@@ -46,20 +52,21 @@ func initCGIRequest() bool {
         request.Proto = os.Getenv("SERVER_PROTOCOL")
         request.ProtoMajor, request.ProtoMinor, ok = parseHTTPVersion(request.Proto)
         if !ok {
-                err = os.NewError("malformed HTTP version: "+request.Proto)
-                return
+                //err = os.NewError("malformed HTTP version: "+request.Proto)
+                return false
         }
 
+        var err os.Error
         request.RawURL = os.Getenv("REQUEST_URI")
         request.URL, err = http.ParseURL(request.RawURL)
         if err != nil {
-                return
+                return false
         }
 
         request.Header = make(map[string]string)
-        for _, v := os.Environ() {
+        for _, v := range os.Environ() {
                 if 5 < len(v) && v[0:5] == "HTTP_" {
-                        if kv := strings.Split(v); kv != nil {
+                        if kv := strings.Split(v, "=", 1); kv != nil {
                                 // TODO: convert the uppercase names?
                                 request.Header[kv[0][5:]] = kv[1]
                         }
@@ -140,13 +147,10 @@ func (cgi *CGIModel) RequestReader() (r io.Reader) {
         return
 }
 
-func (cgi *CGIModel) ProcessRequests(rp RequestProcessor) (err os.Error) {
-        err = rp.ProcessRequest()
-        return
-}
-
-func (cgi *CGIModel) GetRequest() (req *Request) {
-        req = cgi.request
+func (cgi *CGIModel) ProcessRequests(rp RequestManager) (err os.Error) {
+        var response *Response
+        response, err = rp.ProcessRequest(cgi.request)
+        fmt.Fprint(os.Stdout, response.Body)
         return
 }
 

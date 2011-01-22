@@ -18,7 +18,6 @@ fi
 go_tests="src/db_test.go"
 go_files="
   src/app.go
-  src/view.go
   src/cgi.go
   src/fcgi.go
   src/sm.go
@@ -29,6 +28,8 @@ go_files="
   src/err.go
 "
 
+#  src/view.go
+
 build_pack web && build_testmain web
 
 ## test app for FCGIModel
@@ -37,3 +38,4 @@ go_files="fcgi_test.go"
 
 build_exe test.fcgi
 
+exit 0
