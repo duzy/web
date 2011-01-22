@@ -332,13 +332,13 @@ func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, logger *log.
                 if err == nil && response != nil {
                         str := bytes.NewBuffer(make([]byte, 0, 2048))
                         if err = response.writeHeader(str); err != nil { return }
-                        if _, err = fmt.Fprint(str, response.Body); err != nil { return }
+                        if _, err = io.Copy(str, response.Body); err != nil { return }
                         logger.Printf("result:\n%v", str)
                         logger.Printf("result:==========\n")
 
                         hh.ContentLength = uint16(str.Len())
                         if err = binary.Write(out, binary.BigEndian, hh); err != nil { return }
-                        if _, err = fmt.Fprint(out, str); err != nil { return }
+                        if _, err = io.Copy(out, str); err != nil { return }
                 }
         } else {
                 panic(fmt.Sprintf("<b>unknown request</b>: %v", h.RequestId))
