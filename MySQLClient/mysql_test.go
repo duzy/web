@@ -241,6 +241,7 @@ func TestPreparedStatement(t *testing.T) {
                 return
         }
 
+        n := 0;
         for {
                 row, err := stmt.Fetch()
                 if err != nil {
@@ -249,7 +250,25 @@ func TestPreparedStatement(t *testing.T) {
                         }
                         break
                 }
-                fmt.Printf("row: %v\n", row)
+                //fmt.Printf("row: %v\n", row)
+                if row == nil {
+                        t.Errorf("Fetch: row = <nil>")
+                        break
+                }
+                if len(row) != 2 {
+                        t.Errorf("Fetch: row %d, wrong columns: %v", n, row)
+                }
+                if row[0] != n {
+                        t.Errorf("Fetch: row %d: [0] %v", n, row)
+                }
+                if row[1] != testStrings[n] {
+                        t.Errorf("Fetch: row %d: [1] %v", n, row)
+                }
+                n += 1
+        }
+
+        if n != len(testStrings) {
+                t.Errorf("Fetch: wrong rows: %v != %v", n, len(testStrings))
         }
 
         stmt.Close()
