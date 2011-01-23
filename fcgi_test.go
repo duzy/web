@@ -12,7 +12,7 @@ var counter = 0
 func hello(request *web.Request, response *web.Response) (err os.Error) {
         counter += 1
         response.Header["Content-Type"] = "text/html"
-        fmt.Fprintf(response.BodyWriter, "<b>test</b>: <small>num=%d</small>\n", counter)
+        fmt.Fprintf(response.BodyWriter, "<b>test</b>: <small>num=%d</small><br/>\n", counter)
 
         if request.Session() == nil {
                 fmt.Fprintf(response.BodyWriter, "request.Session() == nil\n")
@@ -28,9 +28,21 @@ func hello(request *web.Request, response *web.Response) (err os.Error) {
 }
 
 func main() {
-        app, err := web.NewApp(web.NewFCGIModel())
+        m, err := web.NewFCGIModel()
         if err != nil {
-                // ...
+                fmt.Printf("%v\n", err)
+                return
+        }
+
+        app, err := web.NewApp(m)
+        if err != nil {
+                fmt.Printf("%v\n", err)
+                return
+        }
+
+        if app == nil {
+                fmt.Printf("no app\n")
+                return
         }
 
         app.HandleDefault(web.FuncHandler(hello))

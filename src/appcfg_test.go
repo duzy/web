@@ -8,7 +8,7 @@ import (
 
 func check(t *testing.T, a, b interface{}) {
         if !reflect.DeepEqual(a, b) {
-                t.Error("[%v]!=[%v]", a, b)
+                t.Errorf("%v != %v", a, b)
         }
 }
 
@@ -27,7 +27,7 @@ func TestLoadAppConfig(t *testing.T) {
         check(t, d.Host, "localhost")
         check(t, d.User, "dusellco_test")
         check(t, d.Password, "abc")
-        check(t, d.Database, "dusellco_test")
+        check(t, d.Database, "dusellco_dusell")
 
         d = cfg.Databases["dusell_2"]
         if d == nil { t.Error("no database 'dusell_2'") }
@@ -73,7 +73,7 @@ func TestLoadAppConfig(t *testing.T) {
         if cfg.Database == nil { t.Error("database is nil") }
         if cfg.Persister == nil { t.Error("persister is nil") }
 
-        check(t, cfg.Database.Database, "dusell")
+        check(t, cfg.Database.Database, "dusellco_dusell")
 
         if v, ok := cfg.Persister.(*PersisterConfigFS); ok {
                 check(t, v.Location, "/tmp/web-test/sessions")

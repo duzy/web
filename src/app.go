@@ -28,7 +28,7 @@ type DefaultPathMatcher int
 
 // Make response to a request.
 type RequestHandler interface {
-        Handle(request *Request, response *Response) (err os.Error)
+        HandleRequest(request *Request, response *Response) (err os.Error)
 }
 
 type SubpathHandler interface {
@@ -54,6 +54,7 @@ type Request struct {
         Path string
         ScriptName string
         QueryString string
+        HttpCookie string
         
         app *App
         session *Session
@@ -64,12 +65,11 @@ type Request struct {
 type Response struct {
         http.Response
         BodyWriter io.Writer
-        app *App
         cookies []*Cookie
+        app *App
 }
 
 type Cookie struct {
-        changed bool // 'true' means the cookie must be sent via 'Set-Cookie'
         Name string
         Content string // TODO: should be named as Value
         Domain string
@@ -84,18 +84,74 @@ type App struct {
         config *AppConfig
         handlers map[string]RequestHandler
         pathMatcher PathMatcher
-        requests []*Request
+        requests map[string]*Request
 }
 
-type noCloseReader struct { io.Reader }
-
-func (c noCloseReader) Close() os.Error { return nil }
-
-func (f FuncHandler) Handle(request *Request, response *Response) (err os.Error) {
+func (f FuncHandler) HandleRequest(request *Request, response *Response) (err os.Error) {
         return f(request, response)
 }
 
 func (req *Request) Session() *Session { return req.session; }
+
+func (request *Request) initSession() (err os.Error) {
+        appScriptName := request.ScriptName
+
+        cookies := ParseCookies(request.HttpCookie)
+        for _, c := range cookies {
+                switch c.Name {
+                case cookieSessionId:
+                        if c.Path == "" {
+                                c.Path = appScriptName
+                        }
+
+                        // FIXME: UA may send more than one session
+                        //        cookie, should avoid duplication
+                        request.cookies = append(request.cookies, c)
+                }
+        }
+
+        shouldMakeNewSession := true
+
+        if c := request.Cookie(cookieSessionId); c != nil {
+                // TODO: check value of c.Name and c.Content
+                sec, e := LoadSession(c.Content, request.app.config.Persister)
+                if e == nil {
+                        shouldMakeNewSession = false
+                        request.session = sec
+                } else {
+                        // TODO: log errors
+                        //panic(err)
+                }
+        }
+
+        if shouldMakeNewSession {
+                request.session = NewSession()
+                // FIXME: app.cookies may be not empty since it's
+                //        returned by ParseCookies.
+                request.cookies = append(request.cookies, &Cookie{
+                Name: cookieSessionId,
+                Content: request.session.Id(),
+                Path: request.ScriptName,
+                })
+        }
+
+        if request.session == nil { panic("web: no session") }
+
+        // TODO: use hidden form for session state management
+        //       for the case that the client did not support
+        //       cookies. Also for security reason?
+        return
+}
+
+func (request *Request) Cookies() []*Cookie { return request.cookies }
+func (request *Request) Cookie(k string) (rc *Cookie) {
+        for _, c := range request.cookies {
+                if c.Name == k {
+                        rc = c
+                }
+        }
+        return
+}
 
 func (c *Cookie) String() string {
         s := ""
@@ -141,6 +197,11 @@ func ParseCookies(s string) (cookies []*Cookie) {
 
 // Produce a new web.App to talk to a session.
 func NewApp(m interface {}) (app *App, err os.Error) {
+        if m == nil {
+                err = os.NewError("web.NewApp: Invalid parameter!")
+                return
+        }
+
         switch v := m.(type) {
         case AppModel:
                 app = new(App)
@@ -165,16 +226,14 @@ func NewApp(m interface {}) (app *App, err os.Error) {
                         app = new(App)
                         err = app.initFromConfig(cfg)
                         if err != nil { app = nil }
-                } else {
-                        //error("LoadAppConfig(%s): %v", v, err)
                 }
         }
         return
 }
 
-func newAppModelFromAppConfig(cfg *AppConfig) (am AppModel) {
+func newAppModelFromAppConfig(cfg *AppConfig) (am AppModel, err os.Error) {
         switch cfg.Model {
-        case "CGI": am = NewCGIModel()
+        case "CGI": am, err = NewCGIModel()
         }
         return
 }
@@ -189,7 +248,7 @@ func newAppConfigForAppModel(am AppModel) (config *AppConfig) {
 }
 
 func (app *App) initFromConfig(cfg *AppConfig) (err os.Error) {
-        app.model = newAppModelFromAppConfig(cfg)
+        app.model, err = newAppModelFromAppConfig(cfg)
         if app.model == nil {
                 error("initFromConfig: invalid app model '%s'", cfg.Model)
                 goto finish
@@ -197,12 +256,9 @@ func (app *App) initFromConfig(cfg *AppConfig) (err os.Error) {
 
         app.config = cfg
 
-        //app.cookies = make([]*Cookie, 0)
         app.handlers = make(map[string]RequestHandler)
-        //app.header = make(map[string]string)
         app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
-
-        //err = app.initSession()
+        app.requests = make(map[string]*Request)
 
         // TODO: init database
 finish:
@@ -211,96 +267,14 @@ finish:
 
 func (app *App) initFromModel(am AppModel) (err os.Error) {
         app.model = am
-        //app.cookies = make([]*Cookie, 0)
         app.handlers = make(map[string]RequestHandler)
-        //app.header = make(map[string]string)
         app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
         app.config = newAppConfigForAppModel(app.model)
-        //err = app.initSession()
+        app.requests = make(map[string]*Request)
         return
 }
-
-/*
-func (app *App) initSession() (err os.Error) {
-        appScriptName := app.ScriptName()
-
-        cookies := ParseCookies(app.model.HttpCookie())
-        for _, c := range cookies {
-                switch c.Name {
-                case cookieSessionId:
-                        if c.Path == "" {
-                                c.Path = appScriptName
-                        }
-
-                        // FIXME: UA may send more than one session
-                        //        cookie, should avoid duplication
-                        app.cookies = append(app.cookies, c)
-                }
-        }
-
-        shouldMakeNewSession := true
-
-        if c := app.Cookie(cookieSessionId); c != nil {
-                // TODO: check value of c.Name and c.Content
-                sec, e := LoadSession(c.Content, app.config.Persister)
-                if e == nil {
-                        shouldMakeNewSession = false
-                        app.session = sec
-                } else {
-                        // TODO: log errors
-                        //panic(err)
-                }
-        }
-
-        if shouldMakeNewSession {
-                app.session = NewSession()
-                // FIXME: app.cookies may be not empty since it's
-                //        returned by ParseCookies.
-                app.cookies = append(app.cookies, &Cookie{
-                changed: true,
-                Name: cookieSessionId,
-                Content: app.session.Id(),
-                Path: app.ScriptName(),
-                })
-        }
-
-        if app.session == nil { panic("web: no session") }
-
-        // TODO: use hidden form for session state management
-        //       for the case that the client did not support
-        //       cookies. Also for security reason?
-        return
-}
- */
 
 func (app *App) GetModel() AppModel { return app.model }
-//func (app *App) Session() *Session { return app.session }
-/*
-func (app *App) Method() string { return app.model.RequestMethod() }
-func (app *App) Path() string { return app.model.PathInfo() }
-func (app *App) ScriptName() string { return app.model.ScriptName() }
-func (app *App) Query(k string) []string { return app.query[k] }
-func (app *App) RequestReader() io.Reader { return app.model.RequestReader() }
-
-// Returns unparsed cookies.
-func (app *App) RawCookie() string { return app.model.HttpCookie() }
-func (app *App) Cookies() []*Cookie { return app.cookies }
-func (app *App) Cookie(k string) (rc *Cookie) {
-        for _, c := range app.cookies {
-                if c.Name == k {
-                        rc = c
-                }
-        }
-        return
-}
-
-func (app *App) Header(k string) string { return app.header[k] }
-func (app *App) SetHeader(k, v string) (prev string) {
-        prev = app.header[k]
-        app.header[k] = v
-        return
-}
- */
 
 func (app *App) Handle(url string, h RequestHandler) (prev RequestHandler) {
         prev = app.handlers[url]
@@ -324,11 +298,7 @@ func (app *App) ReturnError(w io.Writer, err interface{}) {
 
 func (res *Response) writeHeader(w io.Writer) (err os.Error) {
         for _, v := range res.cookies {
-                // TODO: only Set-Cookie for 'changed' cookies, avoid for
-                //       browser returned cookies eg the 'session' cookie.
-                if v.changed {
-                        fmt.Fprintf(w, "Set-Cookie: %s\n", v.String())
-                }
+                fmt.Fprintf(w, "Set-Cookie: %s\n", v.String())
         }
 
         for k, v := range res.Header {
@@ -373,10 +343,18 @@ func (app *App) Exec() (err os.Error) {
 
 func (app *App) GetRequest(id string) (request *Request, err os.Error) {
         // TODO: multiple requests management
-        request = &Request{}
+        request = app.requests[id]
+        if request == nil {
+                request = &Request{}
+                request.initSession()
+                app.requests[id] = request
+        }
         request.app = app
         return
 }
+
+type noCloseReader struct { io.Reader }
+func (c noCloseReader) Close() os.Error { return nil }
 
 func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) {
         defer func() {
@@ -395,14 +373,12 @@ func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) 
         contentBuffer := bytes.NewBuffer(make([]byte, 1024*10))
         contentBuffer.Reset()
 
-        body := noCloseReader{ contentBuffer }
-
         response = &Response{}
         response.app = app
         response.cookies = make([]*Cookie, 0, 8)
         response.Header = make(map[string]string)
+        response.Body = noCloseReader{ contentBuffer }
         response.BodyWriter = contentBuffer
-        response.Body = body
 
         handled := false
         for k, h := range app.handlers {
@@ -413,7 +389,7 @@ func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) 
                                         continue
                                 }
                         }
-                        err = h.Handle(req, response)
+                        err = h.HandleRequest(req, response)
                         if err != nil {
                                 // TODO: error handling...
                                 return

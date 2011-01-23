@@ -14,8 +14,8 @@ else
     s=philio
 fi
 
-#go_tests=`ls src/*_test.go`
-go_tests="src/db_test.go"
+go_tests=`ls src/*_test.go`
+#go_tests="src/db_test.go"
 go_files="
   src/app.go
   src/cgi.go
@@ -27,8 +27,6 @@ go_files="
   src/appcfg.go
   src/err.go
 "
-
-#  src/view.go
 
 build_pack web && build_testmain web
 

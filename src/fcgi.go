@@ -14,12 +14,29 @@ import (
 )
 
 type FCGIModel struct {
-        params map[string]string
+        isCGI bool
 }
 
-func NewFCGIModel() (am AppModel) {
-        m := &FCGIModel{}
-        am = AppModel(m)
+// TODO: fix this '= 0'
+var flagCGI int = 2 // 0 = Unchecked, 1 = CGI, 2 = FCGI
+
+func NewFCGIModel() (am AppModel, err os.Error) {
+        if flagCGI == 0 {
+                sa, ec := syscall.Getpeername(FCGI_LISTENSOCK_FILENO)
+                //fmt.Printf("CGI: %v, %x, %v\n", sa, ec, os.Errno(ec))
+                if sa == nil && (ec == syscall.ENOTSOCK || ec == syscall.ENOTCONN) {
+                        flagCGI = 1
+                } else {
+                        flagCGI = 2
+                }
+        }
+
+        if flagCGI == 1 {
+                am, err = NewCGIModel()
+        } else {
+                m := &FCGIModel{}
+                am = AppModel(m)
+        }
         return
 }
 
@@ -333,8 +350,8 @@ func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, logger *log.
                         str := bytes.NewBuffer(make([]byte, 0, 2048))
                         if err = response.writeHeader(str); err != nil { return }
                         if _, err = io.Copy(str, response.Body); err != nil { return }
-                        logger.Printf("result:\n%v", str)
-                        logger.Printf("result:==========\n")
+                        //logger.Printf("result:\n%v", str)
+                        //logger.Printf("result:==========\n")
 
                         hh.ContentLength = uint16(str.Len())
                         if err = binary.Write(out, binary.BigEndian, hh); err != nil { return }
@@ -430,7 +447,7 @@ func (fcgi *FCGIModel) ProcessRequests(rm RequestManager) (err os.Error) {
         for {
                 fd, _, ec := syscall.Accept(FCGI_LISTENSOCK_FILENO)
                 if ec != 0 {
-                        logger.Printf("error: [%v] %s\n", ec, os.Errno(ec).String())
+                        logger.Printf("error: %s\n", os.Errno(ec).String())
                         return
                 }
 

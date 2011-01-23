@@ -1,66 +1,66 @@
 package web
 
 import (
-        "os"
         "io"
+        "os"
         "fmt"
         "runtime"
         "http"
         "strconv"
         "strings"
         //"net"
-)
+) 
 
 // Implements AppModel for CGI web.App.
 type CGIModel struct {
         overides map[string]string
         request *Request
+        responseWriter io.Writer
 }
-
-var cgiRequest *Request
 
 // Parse HTTP version: "HTTP/1.2" -> (1, 2, true), copied from http/request.go
 func parseHTTPVersion(vers string) (int, int, bool) {
 	if len(vers) < 5 || vers[0:5] != "HTTP/" {
 		return 0, 0, false
 	}
-	major, err := strconv.Atoi(vers[5:])
-	if err != nil {
-		return 0, 0, false
-	}
         i := strings.Index(vers[5:], ".")
         if i <= 0 {
                 return 0, 0, false
         }
+	major, err := strconv.Atoi(vers[5:5+i])
+	if err != nil {
+		return 0, 0, false
+	}
 	var minor int
-	minor, err = strconv.Atoi(vers[i+1:])
+	minor, err = strconv.Atoi(vers[5+i+1:])
 	if err != nil {
 		return 0, 0, false
 	}
 	return major, minor, true
 }
 
-func initCGIRequest() bool {
-        if cgiRequest != nil {
-                return true
+func (cgi *CGIModel) initRequest() (err os.Error) {
+        if cgi.request != nil {
+                return
         }
 
         request := new(Request)
+
+        //scheme + "://" + cgi.Getenv("SERVER_NAME") + 
+
         ok := false
-        //scheme + "://" + os.Getenv("SERVER_NAME") + 
-        request.Method = os.Getenv("REQUEST_METHOD")
-        request.Proto = os.Getenv("SERVER_PROTOCOL")
+        request.Method = cgi.Getenv("REQUEST_METHOD")
+        request.Proto = cgi.Getenv("SERVER_PROTOCOL")
         request.ProtoMajor, request.ProtoMinor, ok = parseHTTPVersion(request.Proto)
         if !ok {
-                //err = os.NewError("malformed HTTP version: "+request.Proto)
-                return false
+                err = os.NewError("malformed HTTP version: "+request.Proto)
+                return
         }
 
-        var err os.Error
-        request.RawURL = os.Getenv("REQUEST_URI")
+        request.RawURL = cgi.Getenv("REQUEST_URI")
         request.URL, err = http.ParseURL(request.RawURL)
         if err != nil {
-                return false
+                return
         }
 
         request.Header = make(map[string]string)
@@ -73,26 +73,32 @@ func initCGIRequest() bool {
                 }
         }
 
-        request.Host = os.Getenv("HTTP_HOST")
-        request.Referer = os.Getenv("HTTP_REFERER")
-        request.UserAgent = os.Getenv("HTTP_USER_AGENT")
+        request.Host = cgi.Getenv("HTTP_HOST")
+        request.Referer = cgi.Getenv("HTTP_REFERER")
+        request.UserAgent = cgi.Getenv("HTTP_USER_AGENT")
 
         request.Close = false
-        request.Body = os.Stdin
-        request.ContentLength, _ = strconv.Atoi64(os.Getenv("HTTP_CONTENT_LENGTH"))
+        request.Body = noCloseReader{ os.Stdin }
+        request.ContentLength, _ = strconv.Atoi64(cgi.Getenv("HTTP_CONTENT_LENGTH"))
 
-        cgiRequest = request
-        return true
-}
+        request.Path = cgi.Getenv("PATH_INFO")
+        request.QueryString = cgi.Getenv("QUERY_STRING")
+        request.ScriptName = cgi.Getenv("SCRIPT_NAME")
+        request.HttpCookie = cgi.Getenv("HTTP_COOKIE")
 
-func NewCGIModel() (m AppModel) /*, err os.Error)*/ {
-        if !initCGIRequest() {
+        if err = request.initSession(); err != nil {
                 return
         }
 
+        cgi.request = request
+        return
+}
+
+func NewCGIModel() (m AppModel, err os.Error) {
         cgi := &CGIModel{
                 make(map[string]string),
-                cgiRequest,
+                nil, // request will be inited lately
+                os.Stdout, // write response to Stdout
         }
 
         m = AppModel(cgi)
@@ -116,41 +122,23 @@ func (cgi *CGIModel) Setenv(k, v string) (prev string) {
         return
 }
 
+func (cgi *CGIModel) ProcessRequests(rm RequestManager) (err os.Error) {
+        if err = cgi.initRequest(); err != nil {
+                //fmt.Printf("ProcessRequests: %v\n", err)
+                return
+        }
 
-func (cgi *CGIModel) RequestMethod() string {
-        return cgi.Getenv("REQUEST_METHOD")
-}
+        //fmt.Printf("request: %v\n", cgi.request)
 
-func (cgi *CGIModel) PathInfo() string {
-        return cgi.Getenv("PATH_INFO")
-}
+        if cgi.request == nil {
+                err = os.NewError("bad CGI Request")
+                return
+        }
 
-func (cgi *CGIModel) QueryString() string {
-        return cgi.Getenv("QUERY_STRING")
-}
-
-func (cgi *CGIModel) ScriptName() string {
-        return cgi.Getenv("SCRIPT_NAME")
-}
-
-func (cgi *CGIModel) HttpCookie() string {
-        return cgi.Getenv("HTTP_COOKIE")
-}
-
-func (cgi *CGIModel) ResponseWriter() (w io.Writer) {
-        w = os.Stdout
-        return
-}
-
-func (cgi *CGIModel) RequestReader() (r io.Reader) {
-        r = os.Stdin
-        return
-}
-
-func (cgi *CGIModel) ProcessRequests(rp RequestManager) (err os.Error) {
         var response *Response
-        response, err = rp.ProcessRequest(cgi.request)
-        fmt.Fprint(os.Stdout, response.Body)
+        response, err = rm.ProcessRequest(cgi.request)
+        response.writeHeader(cgi.responseWriter)
+        io.Copy(cgi.responseWriter, response.Body)
         return
 }
 
