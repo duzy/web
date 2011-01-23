@@ -80,7 +80,7 @@ func newFSSessionPersister(sid string, cfg *PersisterConfigFS) (p SessionPersist
                 d += sid[n:n+1] + "/"
         }
         err = os.MkdirAll(d, 0700)
-        if err != nil { panic(err) }
+        if err != nil { /*panic(err)*/ return }
 
         d += sid[n:len(sid)]
 
@@ -179,19 +179,18 @@ func NewSession() (s *Session) {
 func LoadSession(id string, cfg PersisterConfig) (s *Session, err os.Error) {
         p, err := NewSessionPersister(id, cfg)
         if err != nil {
-                fmt.Fprintf(os.Stderr, "error: %s\n", err)
-                goto finish
+                //fmt.Fprintf(os.Stderr, "error: %s\n", err)
+                return
         }
 
         defer p.Close()
 
         s, err = ReadSession(p)
         if err != nil {
-                fmt.Fprintf(os.Stderr, "error: %s\n", err)
-                goto finish
+                //fmt.Fprintf(os.Stderr, "error: %s\n", err)
+                return
         }
 
-finish:
         return
 }
 
@@ -292,23 +291,23 @@ func (s *Session) save(cfg PersisterConfig) (err os.Error) {
                 var p SessionPersister
                 p, err = NewSessionPersister(s.id, cfg)
                 if err != nil {
-                        fmt.Fprintf(os.Stderr, "error: %s\n", err)
-                        goto finish
+                        //fmt.Fprintf(os.Stderr, "error: %s\n", err)
+                        return
                 }
                 if p == nil {
-                        fmt.Fprintf(os.Stderr, "error: can't new a session\n")
-                        goto finish
+                        //fmt.Fprintf(os.Stderr, "error: can't new a session\n")
+                        err = os.NewError("can't make session persister")
+                        return
                 }
                 defer p.Close()
 
                 err = WriteSession(p, s)
                 if err != nil {
-                        fmt.Fprintf(os.Stderr, "error: %s\n", err)
-                        goto finish
+                        //fmt.Fprintf(os.Stderr, "error: %s\n", err)
+                        return
                 }
                 s.changed = false
         }
 
-finish:
         return
 }

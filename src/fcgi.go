@@ -310,7 +310,8 @@ func printErrorCallStack(err interface{}, str io.Writer) {
 
         fmt.Fprintf(str, "Content-Type: text/html; charset=utf-8\n\n")
         fmt.Fprintf(str, `<font color="red"><b>%v</b></font><p>`, err)
-        for _, pc := range stack {
+        for i := range stack {
+                pc := stack[len(stack)-i-1]
                 f := runtime.FuncForPC(pc)
                 if f != nil {
                         file, line := f.FileLine(pc)
@@ -344,6 +345,13 @@ func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, logger *log.
         var request *Request
         request, err = rm.GetRequest(fmt.Sprintf("%v", uint16(h.RequestId)))
         if err == nil && request != nil {
+                if request.session == nil {
+                        // TODO: init special session for FCGI, no FS and DB session storage
+                        if err = request.initSession(); err != nil {
+                                return
+                        }
+                }
+
                 var response *Response
                 response, err = rm.ProcessRequest(request)
                 if err == nil && response != nil {
