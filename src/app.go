@@ -65,8 +65,9 @@ type Request struct {
 type Response struct {
         http.Response
         BodyWriter io.Writer
-        cookies []*Cookie
+
         app *App
+        cookies []*Cookie
 }
 
 type Cookie struct {
@@ -94,19 +95,16 @@ func (f FuncHandler) HandleRequest(request *Request, response *Response) (err os
 func (req *Request) Session() *Session { return req.session; }
 
 func (request *Request) initSession() (err os.Error) {
+        if request.app == nil {
+                err = os.NewError("no associated app")
+                return
+        }
+
         appScriptName := request.ScriptName
 
-        cookies := ParseCookies(request.HttpCookie)
-        for _, c := range cookies {
-                switch c.Name {
-                case cookieSessionId:
-                        if c.Path == "" {
-                                c.Path = appScriptName
-                        }
-
-                        // FIXME: UA may send more than one session
-                        //        cookie, should avoid duplication
-                        request.cookies = append(request.cookies, c)
+        if c := request.Cookie(cookieSessionId); c != nil {
+                if c.Path == "" {
+                        c.Path = appScriptName
                 }
         }
 
@@ -114,6 +112,11 @@ func (request *Request) initSession() (err os.Error) {
 
         if c := request.Cookie(cookieSessionId); c != nil {
                 // TODO: check value of c.Name and c.Content
+                if request.app.config == nil {
+                        err = os.NewError("no app config")
+                        return
+                }
+
                 sec, e := LoadSession(c.Content, request.app.config.Persister)
                 if e == nil {
                         shouldMakeNewSession = false
@@ -166,7 +169,7 @@ func (c *Cookie) String() string {
 // Parse http cookies header.
 // See http://ftp.ics.uci.edu/pub/ietf/http/rfc2109.txt for full spec.
 func ParseCookies(s string) (cookies []*Cookie) {
-        cookies = make([]*Cookie, 0)
+        cookies = make([]*Cookie, 0, 5)
         s = strings.TrimSpace(s) // FIXME: needed?
         if ss := strings.Split(s, ";", -1); 0 < len(ss) {
                 var c *Cookie
@@ -379,6 +382,10 @@ func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) 
         response.Header = make(map[string]string)
         response.Body = noCloseReader{ contentBuffer }
         response.BodyWriter = contentBuffer
+
+        if c := req.Cookie(cookieSessionId); c != nil {
+                response.cookies = append(response.cookies, c)
+        }
 
         handled := false
         for k, h := range app.handlers {

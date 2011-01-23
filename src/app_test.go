@@ -62,12 +62,23 @@ func TestFuncHandler(t *testing.T) {
         m := newTestAppModel()
         m.Setenv("PATH_INFO", "/test")
         m.Setenv("REQUEST_URI", "/test")
+        m.Setenv("HTTP_COOKIE", "foo=bar")
 
         a, err := NewApp(AppModel(m))
         if err != nil { t.Error(err); return }
 
         a.Handle("/test", FuncHandler(func(request *Request, response *Response) (err os.Error) {
                 response.Header["Content-Type"] = "text/html"
+                if request.HttpCookie != "foo=bar" {
+                        t.Errorf("request.HttpCookie not correct: %v", request.HttpCookie)
+                }
+                if c := request.Cookie("foo"); c != nil {
+                        if c.Content != "bar" {
+                                t.Errorf("cookie 'foo' not correct: %v", c)
+                        }
+                } else {
+                        t.Errorf("no cookie 'foo' in: %v", request.cookies)
+                }
                 fmt.Fprint(response.BodyWriter, "test-string")
                 //fmt.Print(request)
                 return
@@ -166,7 +177,7 @@ func TestSessionPersistent(t *testing.T) {
                 if n == -1 { t.Error("no cookie",cookieSessionId,"in",str); return }
 
                 sid = str[n+len(cookieSessionId)+1:ln]
-                if sid=="" { t.Error("empty session id",str); return }
+                if sid=="" { t.Error("no session id",str); return }
         }
         {
                 m := newTestAppModel()
@@ -178,6 +189,16 @@ func TestSessionPersistent(t *testing.T) {
                 if err != nil { t.Error(err); return }
 
                 a.Handle("/test", FuncHandler(func(request *Request, response *Response) (err os.Error) {
+                        if s := request.HttpCookie; s != cookieSessionId+"="+sid {
+                                t.Errorf("wrong request.HttpCookie: '%v'", s)
+                        }
+                        if c := request.Cookie(cookieSessionId); c != nil {
+                                if c.Content != sid {
+                                        t.Errorf("wrong cookie '%v': %v", cookieSessionId, c)
+                                }
+                        } else {
+                                t.Errorf("no cookie '%v'", cookieSessionId)
+                        }
                         response.Header["Content-Type"] = "text/plain"
                         fmt.Fprint(response.BodyWriter, "test-string")
                         v := request.Session().Get("test")
@@ -194,9 +215,17 @@ func TestSessionPersistent(t *testing.T) {
                 if str=="" { t.Error("empty output"); return }
 
                 n := strings.Index(str, cookieSessionId+"=")
-                if n != -1 { t.Error("session persist failed:\n", str); return }
+                if n == -1 { t.Errorf("session persist failed:\n%v", str); return }
 
-                //fmt.Printf("%s\n")
+                str = str[n+len(cookieSessionId)+1:]
+
+                n = strings.Index(str, "\n")
+                if n == -1 { t.Errorf("wrong format: %v", str); return }
+
+                str = str[0:n]
+                if str != sid {
+                        t.Errorf("wrong responsed cookie '%v': %v (expects %v)", cookieSessionId, str, sid)
+                }
         }
 }
 

@@ -39,12 +39,15 @@ func parseHTTPVersion(vers string) (int, int, bool) {
 	return major, minor, true
 }
 
-func (cgi *CGIModel) initRequest() (err os.Error) {
+func (cgi *CGIModel) initRequest(rm RequestManager) (err os.Error) {
         if cgi.request != nil {
                 return
         }
 
-        request := new(Request)
+        request, err := rm.GetRequest("")
+        if err != nil {
+                return
+        }
 
         //scheme + "://" + cgi.Getenv("SERVER_NAME") + 
 
@@ -85,6 +88,7 @@ func (cgi *CGIModel) initRequest() (err os.Error) {
         request.QueryString = cgi.Getenv("QUERY_STRING")
         request.ScriptName = cgi.Getenv("SCRIPT_NAME")
         request.HttpCookie = cgi.Getenv("HTTP_COOKIE")
+        request.cookies = ParseCookies(request.HttpCookie)
 
         if err = request.initSession(); err != nil {
                 return
@@ -123,7 +127,7 @@ func (cgi *CGIModel) Setenv(k, v string) (prev string) {
 }
 
 func (cgi *CGIModel) ProcessRequests(rm RequestManager) (err os.Error) {
-        if err = cgi.initRequest(); err != nil {
+        if err = cgi.initRequest(rm); err != nil {
                 //fmt.Printf("ProcessRequests: %v\n", err)
                 return
         }
