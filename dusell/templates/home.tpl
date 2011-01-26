@@ -8,11 +8,11 @@
   </head>
   <body>
     <div id="page">
-      <div id="header">{page-header}</div>
-      <div id="content-left">{page-content-left}</div>
-      <div id="content">{page-content}</div>
-      <div id="content-right">{page-content-right}</div>
-      <div id="footer">{page-footer}</div>
+      <div id="header">{page_header}</div>
+      <div id="content-left">{page_content_left}</div>
+      <div id="content">{page_content}</div>
+      <div id="content-right">{page_content_right}</div>
+      <div id="footer">{page_footer}</div>
     </div>
     <div id="page-tail"/>
   </body>

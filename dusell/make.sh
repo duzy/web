@@ -9,8 +9,8 @@ go_tests=""
 go_files="
   names.go
   HomePage.go
-  CPanelPage.go
 "
+#  CPanelPage.go
 build_pack dusell && build_testmain dusell
 
 go_files="
@@ -23,6 +23,6 @@ go_files="
   main.go
   cpanel.go
 "
-build_exe cpanel
+#build_exe cpanel
 
 [[ "$?" == "100" ]] && exit 0 # tells ok

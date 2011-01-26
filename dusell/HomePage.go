@@ -2,72 +2,73 @@ package dusell
 
 import (
         "../_obj/web"
-        "../_obj/eBay"
-        "bytes"
-        "fmt"
+        //"../_obj/eBay"
+        //"bytes"
+        //"fmt"
         "os"
 )
 
-type homePage struct {
-        web.TemplateFile
-        web.StandardFields
+type homePageFeed struct {
+        title string
+        keywords string
+        description string
+        page_header string
+        page_content_left *web.View
+        page_content *web.View
+        page_content_right *web.View
+        page_footer string
 }
 
-type PageHeader struct {
-        web.TemplateString
+type homePageContentLeft struct {
 }
 
-type PageContent struct {
-        web.TemplateString
+type homePageContent struct {
 }
 
-type PageContentLeft struct {
-        //web.TemplateString
-        catPath string 
+type homePageContentRight struct {
 }
 
-type PageContentRight struct {
-        web.TemplateString
-}
-
-type PageFooter struct {
-        web.TemplateString
-}
+var contentLeft = &homePageContentLeft{}
+var content = &homePageContent{}
+var contentRight = &homePageContentRight{}
 
 // The internal singleton homePage object.
-var home *homePage = &homePage{
-        web.TemplateFile(TemplateHomePage),
-        make(web.StandardFields),
+var feed = &homePageFeed{
+title: "Dusell.com",
+keywords: "",
+description: "",
+page_header: "<h1>We list good items</h1>",
+page_content_left: nil,
+page_content: nil,
+page_content_right: nil,
+page_footer: "&copy; 2011",
 }
 
-var header = &PageHeader {
-        "<h1>We list good items</h1>",
-}
-
-var contentLeft = &PageContentLeft {}
-var content = &PageContent {}
-var contentRight = &PageContentRight {}
-var footer = &PageContent {
-        "&copy; 2011",
-}
-
-// Get the singleton home page web.ViewModel.
-func GetHomePage() web.ViewModel { return web.ViewModel(home) }
-
-func (h *homePage) MakeFields(app *web.App) (fields interface{}) {
-        contentLeft.catPath = app.ScriptName() + "/cat"
-
-        fields = h.StandardFields.MakeFields(app)
-        h.StandardFields["keywords"] = "DuSell Online Store"
-        h.StandardFields["description"] = "DuSell Online Store do what you buy"
-        h.StandardFields["page-header"] = web.NewStringer(header, app)
-        h.StandardFields["page-content-left"] = web.NewStringer(contentLeft, app)
-        h.StandardFields["page-content"] = web.NewStringer(content, app)
-        h.StandardFields["page-content-right"] = web.NewStringer(contentRight, app)
-        h.StandardFields["page-footer"] = web.NewStringer(footer, app)
+func (feed *homePageFeed) PrepareFeed(request *web.Request) (err os.Error) {
+        feed.page_content_left = web.NewView(contentLeft)
+        feed.page_content = web.NewView(content)
+        feed.page_content_right = web.NewView(contentRight)
         return
 }
 
+var home, _ = web.NewHtmlPage(TemplateHomePage, feed)
+
+// Get the singleton home page web.ViewModel.
+func GetHomePage() *web.HtmlPage { return home }
+
+func (v *homePageContentLeft) Render(w web.RenderBuffer) (err os.Error) {
+        return
+}
+
+func (v *homePageContent) Render(w web.RenderBuffer) (err os.Error) {
+        return
+}
+
+func (v *homePageContentRight) Render(w web.RenderBuffer) (err os.Error) {
+        return
+}
+
+/*
 func (h *homePage) HandleSubpath(subpath string, app *web.App) (handled bool) {
         switch {
         case 4 <= len(subpath) && subpath[0:4] == "/cat":
@@ -135,3 +136,4 @@ func GetHotCategories() (cats []*eBay.Category, err os.Error) {
         cats, err = cc.GetCategoriesByLevel(1)
         return
 }
+*/

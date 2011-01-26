@@ -18,14 +18,15 @@ go_tests=`ls src/*_test.go`
 #go_tests="src/db_test.go"
 go_files="
   src/app.go
+  src/appcfg.go
   src/cgi.go
-  src/fcgi.go
-  src/sm.go
-  src/dbmgr.go
   src/db.go
   src/db_mysql_$s.go
-  src/appcfg.go
+  src/dbmgr.go
   src/err.go
+  src/fcgi.go
+  src/sm.go
+  src/viewmgr.go
 "
 
 build_pack web && build_testmain web
@@ -35,5 +36,9 @@ go_tests=""
 go_files="fcgi_test.go"
 
 build_exe test.fcgi
+
+go_files="fcgi_page.go"
+
+build_exe page.fcgi
 
 exit 0
