@@ -138,11 +138,11 @@ type UnknownTypeBody struct {
 }
 
 func (v VersionCode) String() string {
-        return fmt.Sprintf("Version<%d>", uint8(v))
+        return fmt.Sprintf("Version(%d)", uint8(v))
 }
 
 func (ri RequestId) String() string {
-        return fmt.Sprintf("RequestId<%d>", uint16(ri))
+        return fmt.Sprintf("RequestId(%d)", uint16(ri))
 }
 
 func (t RecordType) String() string {
@@ -180,11 +180,11 @@ func (r Role) String() string {
 
 func (f BeginFlag) String() string {
         names := []string{
-        0: "BeginRequestFlag<0>",
+        0: "BeginRequestFlag(0)",
         FCGI_KEEP_CONN: "FCGI_KEEP_CONN",
         }
         if len(names) <= int(f) {
-                return fmt.Sprintf("BeginRequestFlag<%v>", uint16(f))
+                return fmt.Sprintf("BeginRequestFlag(%v)", uint16(f))
         }
         return names[f]
 }
@@ -455,7 +455,7 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, fd int) {
                         return
                 }
 
-                logger.Printf("header: %v\n", h)
+                //logger.Printf("header: %v\n", h)
 
                 content, err := h.readContent(in)
                 if err != nil {
@@ -471,11 +471,11 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, fd int) {
                                 logger.Printf("error: BeginRequest.parse\n")
                                 return
                         }
-                        logger.Printf("BeginRequest: %v\n", rec)
+                        //logger.Printf("BeginRequest: %v\n", rec)
                 case FCGI_PARAMS:
                         if 0 < h.ContentLength {
                                 params := parseNameValuePares(content)
-                                logger.Printf("params: %v\n", params)
+                                //logger.Printf("params: %v\n", params)
 
                                 var request *Request
                                 request, err = rm.GetRequest(fmt.Sprintf("%v", uint16(h.RequestId)))
