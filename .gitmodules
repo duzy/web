@@ -1,0 +1,6 @@
+[submodule "apps/dusell"]
+	path = apps/dusell
+	url = duzy@192.168.100.105:~/code/ds/root/ds/web/apps/dusell.git
+[submodule "apps/duzy.info"]
+	path = apps/duzy.info
+	url = duzy@192.168.100.105:~/code/ds/root/ds/web/apps/duzy.info.git
