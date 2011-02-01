@@ -20,7 +20,7 @@ type SQLStatement interface {
 }
 
 type QueryResult interface {
-        GetFieldCount() uint64
+        GetFieldCount() uint
         GetFieldName(n int) string
         GetAffectedRows() uint64
         GetInsertId() uint64
@@ -28,6 +28,7 @@ type QueryResult interface {
 
         // Fetch the current row (as an array) and move next
         FetchRow() (row []interface{}, err os.Error)
-        MoveFirst()
-}
+        //MoveFirst()
 
+        Free() (err os.Error)
+}

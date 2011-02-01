@@ -75,6 +75,8 @@ type ResultSet struct {
 
         NumFields uint
         AffectedRows uint64
+
+        InsertId uint64
 }
 
 type Field struct {
@@ -125,7 +127,7 @@ func (b *bind) makeBufferForField(field *C.MYSQL_FIELD) {
         case FIELD_TYPE_TINY:           l = unsafe.Sizeof(int8(0))
 	case FIELD_TYPE_SHORT:          l = unsafe.Sizeof(int16(0))
         case FIELD_TYPE_LONG:           l = unsafe.Sizeof(int(0))
-	case FIELD_TYPE_FLOAT:          l = unsafe.Sizeof(float(0))
+	case FIELD_TYPE_FLOAT:          l = unsafe.Sizeof(float32(0))
         case FIELD_TYPE_DOUBLE:         l = unsafe.Sizeof(float64(0))
 	case FIELD_TYPE_NULL:           //l = unsafe.Sizeof()
         case FIELD_TYPE_TIMESTAMP:      //l = unsafe.Sizeof()
@@ -304,6 +306,7 @@ func (conn *Connection) Query(sql string) (rs *ResultSet, err os.Error) {
         h: nil,
         NumFields: uint(C.mysql_field_count(conn.h)),
         AffectedRows: uint64(C.mysql_affected_rows(conn.h)),
+        InsertId: uint64(C.mysql_insert_id(conn.h)),
         }
 
         //res := C.mysql_use_result(conn.h)
@@ -402,6 +405,20 @@ func (rs *ResultSet) FetchFields() (fields []Field, err os.Error) {
                 Charset: uint(C._field_charsetnr(f)),
                 Type: FieldType(C._field_type(f)),
                 }
+        }
+        return
+}
+
+func (rs *ResultSet) GetNumRows() (num uint64) {
+        if rs.h != nil {
+                num = uint64(C.mysql_num_rows(rs.h))
+        }
+        return
+}
+
+func (rs *ResultSet) RowSeek() (num uint64) {
+        if rs.h != nil {
+                num = uint64(C.mysql_num_rows(rs.h))
         }
         return
 }
@@ -558,6 +575,13 @@ func (stmt *Statement) SQLState() (s string) {
         return
 }
 
+func (stmt *Statement) FieldCount() (n uint) {
+        if stmt.h != nil {
+                n = uint(C.mysql_stmt_field_count(stmt.h))
+        }
+        return
+}
+
 func (stmt *Statement) NumRows() (n uint64) {
         if stmt.h != nil {
                 n = uint64(C.mysql_stmt_num_rows(stmt.h))
@@ -568,6 +592,13 @@ func (stmt *Statement) NumRows() (n uint64) {
 func (stmt *Statement) AffectedRows() (n uint64) {
         if stmt.h != nil {
                 n = uint64(C.mysql_stmt_affected_rows(stmt.h))
+        }
+        return
+}
+
+func (stmt *Statement) InsertId() (n uint64) {
+        if stmt.h != nil {
+                n = uint64(C.mysql_stmt_insert_id(stmt.h))
         }
         return
 }

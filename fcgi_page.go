@@ -16,13 +16,13 @@ type TestPageFeed struct {
         content web.View
 }
 
-func (feed *ContentFeed) PrepareFeed(request *web.Request) (err os.Error) {
+func (feed *ContentFeed) Prepare(request *web.Request) (err os.Error) {
         feed.counter += 1
         return
 }
 
-func (feed *TestPageFeed) PrepareFeed(request *web.Request) (err os.Error) {
-        feed.content.Prepare(request)
+func (feed *TestPageFeed) Prepare(request *web.Request) (err os.Error) {
+        //feed.content.Prepare(request)
         return
 }
 

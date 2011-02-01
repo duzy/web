@@ -5,6 +5,7 @@ import (
         "os"
         "io"
         "io/ioutil"
+        "reflect"
         "template"
         "fmt"
 )
@@ -31,10 +32,6 @@ type View interface {
         fmt.Stringer
 }
 
-type TemplateFeed interface {
-        PrepareFeed(request *Request) (err os.Error)
-}
-
 /**
  Usage:
 
@@ -49,13 +46,13 @@ type Page struct {
 
 type HtmlPage Page
 
-func NewHtmlPage(fn string, feed TemplateFeed) (page *HtmlPage, err os.Error) {
+func NewHtmlPage(fn string, feed interface{}) (page *HtmlPage, err os.Error) {
         p, err := NewPage(fn, feed)
         page = (*HtmlPage)(p)
         return
 }
 
-func NewPage(fn string, feed TemplateFeed) (page *Page, err os.Error) {
+func NewPage(fn string, feed interface{}) (page *Page, err os.Error) {
         f, err := os.Open(fn, os.O_RDONLY, 0)
         if err != nil {
                 return
@@ -70,18 +67,18 @@ func NewPage(fn string, feed TemplateFeed) (page *Page, err os.Error) {
         return
 }
 
-func NewPageFromString(s string, feed TemplateFeed) (page *Page, err os.Error) {
+func NewPageFromString(s string, feed interface{}) (page *Page, err os.Error) {
         var temp *template.Template
         temp, err = template.Parse(s, nil/* TODO: make use of it? */)
         if err != nil {
                 return
         }
-        
+
         page = &Page{ templateView{ temp, feed } }
         return
 }
 
-func NewHtmlPageFromString(s string, feed TemplateFeed) (page *HtmlPage, err os.Error) {
+func NewHtmlPageFromString(s string, feed interface{}) (page *HtmlPage, err os.Error) {
         var pg *Page
         pg, err = NewPageFromString(s, feed)
         if err != nil {
@@ -126,32 +123,31 @@ func (v viewStringer) String() string {
 }
 
 type nothingPrepareable struct { Renderable }
-
-func (v *nothingPrepareable) Prepare(request *Request) os.Error { return nil }
+func (v nothingPrepareable) Prepare(request *Request) os.Error { return nil }
 
 func NewView(v Renderable) (view View) {
         if _, ok := v.(Renderable); ok {
                 
         }
 
+        var vv PrepareableRenderable
         if _, ok := v.(Prepareable); ok {
-                vv, _ := v.(PrepareableRenderable)
-                view = viewStringer{ vv }
+                vv, _ = v.(PrepareableRenderable)
         } else {
-                vv := &nothingPrepareable{ v }
-                view = viewStringer{ vv }
+                vv = nothingPrepareable{ v }
         }
 
+        view = viewStringer{ vv }
         return
 }
 
 // Template implements View interface.
 type templateView struct {
         template *template.Template
-        feed TemplateFeed
+        feed interface{}
 }
 
-func NewTemplate(fn string, feed TemplateFeed) (view View, err os.Error) {
+func NewTemplate(fn string, feed interface{}) (view View, err os.Error) {
         f, err := os.Open(fn, os.O_RDONLY, 0)
         if err != nil {
                 return
@@ -166,21 +162,39 @@ func NewTemplate(fn string, feed TemplateFeed) (view View, err os.Error) {
         return
 }
 
-func NewTemplateFromString(s string, feed TemplateFeed) (view View, err os.Error) {
+func NewTemplateFromString(s string, feed interface{}) (view View, err os.Error) {
         var temp *template.Template
         temp, err = template.Parse(s, nil/* TODO: make use of it? */)
         if err != nil {
                 return
         }
 
-        t := &templateView{ temp, feed }
-        view = NewView(t)
+        var tv *templateView
+        tv = &templateView{ temp, feed }
+
+        view = NewView(tv)
         return
 }
 
 func (v *templateView) Prepare(request *Request) (err os.Error) {
-        err = v.feed.PrepareFeed(request)
-        // TODO: prepare feed fields
+        if p, ok := v.feed.(Prepareable); ok {
+                err = p.Prepare(request)
+                // TODO: prepare feed fields
+        }
+
+        vv := reflect.NewValue(v.feed)
+        if p, ok := vv.(*reflect.PtrValue); ok {
+                vv = p.Elem()
+        }
+
+        if sv, ok := vv.(*reflect.StructValue); ok {
+                for i := 0; i < sv.NumField(); i += 1 {
+                        f := sv.Field(i)
+                        if p, ok := f.Interface().(Prepareable); ok {
+                                err = p.Prepare(request)
+                        }
+                }
+        }
         return
 }
 

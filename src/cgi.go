@@ -51,6 +51,15 @@ func (cgi *CGIModel) initRequest(rm RequestManager) (err os.Error) {
 
         //scheme + "://" + cgi.Getenv("SERVER_NAME") + 
 
+        request.Header = make(map[string]string)
+        for _, v := range os.Environ() {
+                //if 5 < len(v) && v[0:5] == "HTTP_" {
+                if kv := strings.Split(v, "=", 1); kv != nil {
+                        // TODO: convert the uppercase names?
+                        request.Header[kv[0][5:]] = kv[1]
+                }
+        }
+
         ok := false
         request.Method = cgi.Getenv("REQUEST_METHOD")
         request.Proto = cgi.Getenv("SERVER_PROTOCOL")
@@ -64,16 +73,6 @@ func (cgi *CGIModel) initRequest(rm RequestManager) (err os.Error) {
         request.URL, err = http.ParseURL(request.RawURL)
         if err != nil {
                 return
-        }
-
-        request.Header = make(map[string]string)
-        for _, v := range os.Environ() {
-                if 5 < len(v) && v[0:5] == "HTTP_" {
-                        if kv := strings.Split(v, "=", 1); kv != nil {
-                                // TODO: convert the uppercase names?
-                                request.Header[kv[0][5:]] = kv[1]
-                        }
-                }
         }
 
         request.Host = cgi.Getenv("HTTP_HOST")

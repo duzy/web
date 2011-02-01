@@ -1,16 +1,19 @@
 package web
 
 import (
-        "bytes"
         "bufio"
-        "os"
+        "bytes"
+        "encoding/binary"
+        "fmt"
+        "http"
         "io"
         //"io/ioutil"
-        "fmt"
         "log"
-        "syscall"
-        "encoding/binary"
+        "os"
         "runtime"
+        "strconv"
+        //"strings"
+        "syscall"
 )
 
 type FCGIModel struct {
@@ -19,6 +22,8 @@ type FCGIModel struct {
 
 // TODO: fix this '= 0'
 var flagCGI int = 2 // 0 = Unchecked, 1 = CGI, 2 = FCGI
+
+var logger *log.Logger
 
 func NewFCGIModel() (am AppModel, err os.Error) {
         if flagCGI == 0 {
@@ -197,7 +202,7 @@ func (s ProtocolStatus) String() string {
         return names[s]
 }
 
-func (h *RecordHeader) read(logger *log.Logger, r io.Reader) (ok bool, err os.Error) {
+func (h *RecordHeader) read(r io.Reader) (ok bool, err os.Error) {
         b := make([]byte, 8)
         l, err := io.ReadFull(r, b)
         if l != 8 {
@@ -260,24 +265,24 @@ func (rec *UnknownTypeRecord) parse(b []byte) (ok bool) {
         return
 }
 
-func getSize(b []byte) (size uint, ob []byte) {
+func getParamSize(b []byte) (size int, ob []byte) {
         s := b[0]
         if s>>7 == 1 {
                 if 4 <= len(b) {
-                        size = uint(binary.BigEndian.Uint32(b[0:4]))
+                        size = int(binary.BigEndian.Uint32(b[0:4]))
                         ob = b[4:]
                 }
         } else {
                 if 0 < len(b) {
-                        size = uint(s)
+                        size = int(s)
                         ob = b[1:]
                 }
         }
         return
 }
 
-func getValue(b []byte, size uint) (v string, ob []byte) {
-        if len(b) < int(size) {
+func getParamValue(b []byte, size int) (v string, ob []byte) {
+        if len(b) < size {
                 v = string(b[0:])
                 ob = b[0:0]
         } else {
@@ -288,15 +293,18 @@ func getValue(b []byte, size uint) (v string, ob []byte) {
 }
 
 func parseParams(b []byte) (params map [string]string) {
-        var kl, vl uint
+        var kl, vl int
         var k, v string
         params = make(map[string]string)
         for 0 < len(b) {
-                if kl, b = getSize(b);          b == nil { break }
-                if vl, b = getSize(b);          b == nil { break }
-                if k, b = getValue(b, kl);      b == nil { break }
-                if v, b = getValue(b, vl);      b == nil { break }
-                //logger.Printf("kv: %v, %v, %d\n", k, v, len(b))
+                if kl, b = getParamSize(b);     b == nil { break }
+                logger.Printf("kl: %v, %d\n", vl, len(b))
+                if vl, b = getParamSize(b);     b == nil { break }
+                logger.Printf("vl: %v, %d\n", vl, len(b))
+                if k, b = getParamValue(b, kl); b == nil { break }
+                logger.Printf("k: %v, %d\n", k, len(b))
+                if v, b = getParamValue(b, vl); b == nil { break }
+                logger.Printf("kv: %v, %v, %d\n", k, v, len(b))
                 params[k] = v
         }
         return
@@ -321,7 +329,47 @@ func printErrorCallStack(err interface{}, str io.Writer) {
         fmt.Fprintf(str, `</p>`)
 }
 
-func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, logger *log.Logger, h *RecordHeader) (err os.Error) {
+func initRequest(request *Request, params map[string]string) (err os.Error) {
+        request.Header = params
+
+        ok := false
+        request.Method = params["REQUEST_METHOD"]
+        request.Proto = params["SERVER_PROTOCOL"]
+        request.ProtoMajor, request.ProtoMinor, ok = parseHTTPVersion(request.Proto)
+        if !ok {
+                err = os.NewError("malformed HTTP version: "+request.Proto)
+                return
+        }
+
+        request.RawURL = params["REQUEST_URI"]
+        request.URL, err = http.ParseURL(request.RawURL)
+        if err != nil {
+                return
+        }
+
+        request.Host = params["HTTP_HOST"]
+        request.Referer = params["HTTP_REFERER"]
+        request.UserAgent = params["HTTP_USER_AGENT"]
+
+        request.Close = false
+        //request.Body
+        request.ContentLength, _ = strconv.Atoi64(params["HTTP_CONTENT_LENGTH"])
+
+        request.Path = params["PATH_INFO"]
+        request.QueryString = params["QUERY_STRING"]
+        request.ScriptName = params["SCRIPT_NAME"]
+        request.HttpCookie = params["HTTP_COOKIE"]
+        request.cookies = ParseCookies(request.HttpCookie)
+
+        if request.session != nil { return }
+        if err = request.initSession(); err != nil {
+                return
+        }
+
+        return
+}
+
+func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, h *RecordHeader) (err os.Error) {
         logger.Printf("sending result: %v\n", h.RequestId)
 
         hh := &RecordHeader{
@@ -372,7 +420,7 @@ func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, logger *log.
         return
 }
 
-func (fcgi *FCGIModel) processSession(rm RequestManager, logger *log.Logger, fd int) {
+func (fcgi *FCGIModel) processSession(rm RequestManager, fd int) {
         //logger.Printf("FCGI_WEB_SERVER_ADDRS: %s\n", os.Getenv("FCGI_WEB_SERVER_ADDRS"))
 
         f := os.NewFile(fd, "FCGI_LISTENSOCK_FILENO")
@@ -387,7 +435,7 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, logger *log.Logger, fd 
         in := bufio.NewReader(f)
 
         for {
-                ok, err := h.read(logger, in)
+                ok, err := h.read(in)
                 if !ok || err != nil {
                         logger.Printf("error: RecordHeader.read: %v, %v\n", ok, err)
                         return
@@ -414,10 +462,27 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, logger *log.Logger, fd 
                         if 0 < h.ContentLength {
                                 params := parseParams(content)
                                 logger.Printf("params: %v\n", params)
+
+                                var request *Request
+                                request, err = rm.GetRequest(fmt.Sprintf("%v", uint16(h.RequestId)))
+                                if request == nil {
+                                        logger.Printf("no request: %v", h.RequestId)
+                                        return
+                                }
+                                if err != nil {
+                                        logger.Printf("error: %v", err)
+                                        return
+                                }
+
+                                err = initRequest(request, params)
+                                if err != nil {
+                                        logger.Printf("error: %v", err)
+                                        return
+                                }
                         }
                 case FCGI_STDIN:
                         if h.ContentLength == uint16(0) {
-                                fcgi.sendResult(f, rm, logger, h)
+                                fcgi.sendResult(f, rm, h)
 
                                 hh := &RecordHeader{
                                 Version: h.Version,
@@ -436,6 +501,7 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, logger *log.Logger, fd 
                                 logger.Printf("request ended\n")
                         } else {
                                 logger.Printf("TODO: obtain data from the web server\n")
+                                //TODO: request.Body = noCloseReader{ body }
                         }
                         return
                 default:
@@ -446,7 +512,7 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, logger *log.Logger, fd 
 
 func (fcgi *FCGIModel) ProcessRequests(rm RequestManager) (err os.Error) {
         logFile, _ := os.Open("/tmp/a.go.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
-        logger := log.New(logFile, "", log.Lshortfile|log.Ltime)
+        logger = log.New(logFile, "", log.Lshortfile|log.Ltime)
 
         logger.Printf("=================================\n")
         logger.Printf("ARGS: %v\n", os.Args)
@@ -461,7 +527,7 @@ func (fcgi *FCGIModel) ProcessRequests(rm RequestManager) (err os.Error) {
 
                 logger.Printf("Accepted: <%v>\n", fd)
 
-                go fcgi.processSession(rm, logger, fd)
+                go fcgi.processSession(rm, fd)
         }
         return
 }
