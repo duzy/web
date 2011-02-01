@@ -1,2 +1,2 @@
-<b>title</b>: {title}
-<p>{content}</p>
+<b>title</b>: {TITLE}
+<p>{CONTENT}</p>

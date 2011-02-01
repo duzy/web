@@ -8,16 +8,16 @@ import (
 )
 
 type ContentFeed struct {
-        counter int
+        COUNTER int
 }
 
 type TestPageFeed struct {
-        title string
-        content web.View
+        TITLE string
+        CONTENT web.View
 }
 
 func (feed *ContentFeed) Prepare(request *web.Request) (err os.Error) {
-        feed.counter += 1
+        feed.COUNTER += 1
         return
 }
 
@@ -45,7 +45,7 @@ func main() {
         }
 
         contentFeed := &ContentFeed{ 0 }
-        content, err := web.NewTemplateFromString("counter: {counter}", contentFeed)
+        content, err := web.NewTemplateFromString("counter: {COUNTER}", contentFeed)
         if err != nil {
                 fmt.Printf("error: %v\n", err)
                 return

@@ -1,7 +1,7 @@
 package web
 
 import (
-        "./MySQLClient/_obj/mysql"
+        "../MySQLClient/_obj/mysql"
         "fmt"
         "os"
 )

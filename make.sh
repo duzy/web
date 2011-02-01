@@ -32,16 +32,16 @@ go_files="
   src/viewmgr.go
 "
 
-( build_pack web && build_testmain web ) || exit -1
+( build_pack web && build_testmain web ) || ( echo "rc: web: $?" && exit -1 )
 
 ## test app for FCGIModel
 go_tests=""
 go_files="fcgi_test.go"
 
-( build_exe test.fcgi ) || exit -1
+( build_exe test.fcgi ) || ( echo "rc: test.fcgi: $?" && exit -1 )
 
 go_files="fcgi_page.go"
 
-( build_exe page.fcgi ) || exit -1
+( build_exe page.fcgi ) || ( echo "rc: page.fcgi: $?" && exit -1 )
 
 exit 0

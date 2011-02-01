@@ -265,11 +265,14 @@ func (rec *UnknownTypeRecord) parse(b []byte) (ok bool) {
         return
 }
 
-func getParamSize(b []byte) (size int, ob []byte) {
+func getNVSize(b []byte) (size int, ob []byte) {
         s := b[0]
         if s>>7 == 1 {
                 if 4 <= len(b) {
+                        b0 := b[0]
+                        b[0] = b[0] & 0x7F // clear the FLAG bit
                         size = int(binary.BigEndian.Uint32(b[0:4]))
+                        b[0] = b0 // restore B0
                         ob = b[4:]
                 }
         } else {
@@ -281,7 +284,7 @@ func getParamSize(b []byte) (size int, ob []byte) {
         return
 }
 
-func getParamValue(b []byte, size int) (v string, ob []byte) {
+func getNVValue(b []byte, size int) (v string, ob []byte) {
         if len(b) < size {
                 v = string(b[0:])
                 ob = b[0:0]
@@ -292,19 +295,21 @@ func getParamValue(b []byte, size int) (v string, ob []byte) {
         return
 }
 
-func parseParams(b []byte) (params map [string]string) {
+func parseNameValuePares(b []byte) (params map [string]string) {
         var kl, vl int
         var k, v string
         params = make(map[string]string)
         for 0 < len(b) {
-                if kl, b = getParamSize(b);     b == nil { break }
-                logger.Printf("kl: %v, %d\n", vl, len(b))
-                if vl, b = getParamSize(b);     b == nil { break }
-                logger.Printf("vl: %v, %d\n", vl, len(b))
-                if k, b = getParamValue(b, kl); b == nil { break }
-                logger.Printf("k: %v, %d\n", k, len(b))
-                if v, b = getParamValue(b, vl); b == nil { break }
-                logger.Printf("kv: %v, %v, %d\n", k, v, len(b))
+                if kl, b = getNVSize(b);     b == nil { break }
+                if vl, b = getNVSize(b);     b == nil { break }
+                if kl < 0 || vl < 0 {
+                        logger.Printf("error: wrong Name-Value pair size: klen=%d, vlen=%d, (%d bytes left)\n", kl, vl, len(b))
+                        logger.Printf("error: Name-Value pares: %v", string(b))
+                        break
+                }
+                if k, b = getNVValue(b, kl); b == nil { break }
+                if v, b = getNVValue(b, vl); b == nil { break }
+                //logger.Printf("kv: %v, %v, %d\n", k, v, len(b))
                 params[k] = v
         }
         return
@@ -332,19 +337,26 @@ func printErrorCallStack(err interface{}, str io.Writer) {
 func initRequest(request *Request, params map[string]string) (err os.Error) {
         request.Header = params
 
-        ok := false
         request.Method = params["REQUEST_METHOD"]
         request.Proto = params["SERVER_PROTOCOL"]
+
+        ok := false
+        if request.Proto == "" {
+                logger.Printf("empty SERVER_PROTOCOL, force to HTTP/1.1")
+                request.Proto = "HTTP/1.1"
+        }
+
         request.ProtoMajor, request.ProtoMinor, ok = parseHTTPVersion(request.Proto)
         if !ok {
-                err = os.NewError("malformed HTTP version: "+request.Proto)
+                err = os.NewError("malformed HTTP version: '"+request.Proto+"'")
                 return
         }
 
         request.RawURL = params["REQUEST_URI"]
         request.URL, err = http.ParseURL(request.RawURL)
         if err != nil {
-                return
+                logger.Printf("error: REQUEST_URI: '%v' (%v)", request.RawURL, err)
+                //return
         }
 
         request.Host = params["HTTP_HOST"]
@@ -363,7 +375,8 @@ func initRequest(request *Request, params map[string]string) (err os.Error) {
 
         if request.session != nil { return }
         if err = request.initSession(); err != nil {
-                return
+                logger.Printf("error: request.initSession: '%v'", err)
+                //return
         }
 
         return
@@ -396,7 +409,8 @@ func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, h *RecordHea
                 if request.session == nil {
                         // TODO: init special session for FCGI, no FS and DB session storage
                         if err = request.initSession(); err != nil {
-                                return
+                                logger.Printf("error: request.initSession: '%v'", err)
+                                //return
                         }
                 }
 
@@ -460,7 +474,7 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, fd int) {
                         logger.Printf("BeginRequest: %v\n", rec)
                 case FCGI_PARAMS:
                         if 0 < h.ContentLength {
-                                params := parseParams(content)
+                                params := parseNameValuePares(content)
                                 logger.Printf("params: %v\n", params)
 
                                 var request *Request
@@ -477,7 +491,7 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, fd int) {
                                 err = initRequest(request, params)
                                 if err != nil {
                                         logger.Printf("error: %v", err)
-                                        return
+                                        //return
                                 }
                         }
                 case FCGI_STDIN:
