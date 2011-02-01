@@ -101,8 +101,9 @@ func (db *mysqlDatabase) Prepare(sql string) (stmt SQLStatement, err os.Error) {
 
 func (db *mysqlDatabase) Escape(s string) string { return db.MySQL.Escape(s) }
 
+func (qr *mysqlQueryResult) Free() os.Error { return nil }
 func (qr *mysqlQueryResult) GetRowCount() uint64 { return qr.MySQLResult.RowCount }
-func (qr *mysqlQueryResult) GetFieldCount() uint64 { return qr.MySQLResult.FieldCount }
+func (qr *mysqlQueryResult) GetFieldCount() uint { return uint(qr.MySQLResult.FieldCount) }
 func (qr *mysqlQueryResult) GetFieldName(n int) string { return qr.MySQLResult.Fields[n].Name }
 func (qr *mysqlQueryResult) GetAffectedRows() uint64 { return qr.MySQLResult.AffectedRows }
 func (qr *mysqlQueryResult) GetInsertId() uint64 { return qr.MySQLResult.InsertId }

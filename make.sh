@@ -17,6 +17,8 @@ if [[ "xx" == "x$sx" ]] ; then
     fi
 fi
 
+        s=philio
+
 go_tests=`ls src/*_test.go`
 #go_tests="src/db_test.go"
 go_files="

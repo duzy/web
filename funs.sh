@@ -1,5 +1,8 @@
 #!/bin/bash
 
+GO=8g
+LD=8l
+ 
 prepare() {
     [[ "x$1" == "x" ]] && (echo "'prepare' requires a argument!" && exit -1)
     [[ -d $1 ]] || mkdir -p $1
@@ -109,11 +112,11 @@ _build()
     fi
 
     (prepare _obj) \
-        && 8g $go_incs -o _obj/$name.8 $go_files \
+        && $GO $go_incs -o _obj/$name.8 $go_files \
         && {
             [[ "$type" == "pack" ]] && gopack grc _obj/$name.a _obj/$name.8
             [[ "$type" == "exe" ]] && {
-                prepare _bin && 8l $go_libs -o _bin/$name _obj/$name.8
+                prepare _bin && $LD $go_libs -o _bin/$name _obj/$name.8
             }
         }
 
@@ -123,7 +126,7 @@ _build()
     fi
 
     (prepare _test)\
-        && 8g -o _test/$name.8 $go_files $go_tests \
+        && $GO -o _test/$name.8 $go_files $go_tests \
         && gopack grc _test/$name.a _test/$name.8
 }
 
@@ -145,7 +148,7 @@ build_testmain()
     print_testmain.go $name > $testmain || return 1
 
     (prepare _test) \
-        && 8g -I_test -o _test/main.8 $testmain \
-        && 8l -L_test -o testmain _test/main.8 \
+        && $GO -I_test -o _test/main.8 $testmain \
+        && $LD -L_test -o testmain _test/main.8 \
 
 }
