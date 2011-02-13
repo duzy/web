@@ -2,10 +2,10 @@
 
 . funs.sh
 
-./make-mysql.sh > /dev/null || {
-    echo "..."
-    exit 1
-}
+#./tst/make-mysql.sh > /dev/null || {
+#    echo "..."
+#    exit 1
+#}
 
 s="cbind"
 if [[ "xx" == "x$sx" ]] ; then
@@ -36,11 +36,11 @@ go_files="
 
 ## test app for FCGIModel
 go_tests=""
-go_files="fcgi_test.go"
+go_files="tst/fcgi_test.go"
 
 ( build_exe test.fcgi ) || ( echo "rc: test.fcgi: $?" && exit -1 )
 
-go_files="fcgi_page.go"
+go_files="tst/fcgi_page.go"
 
 ( build_exe page.fcgi ) || ( echo "rc: page.fcgi: $?" && exit -1 )
 

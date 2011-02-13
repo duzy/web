@@ -143,12 +143,13 @@ build_exe()
 build_testmain()
 {
     local name=$1
-    local testmain=_testmain.go
+    local testmain=_test/main.go
 
-    print_testmain.go $name > $testmain || return 1
+    #print_testmain.go $name > $testmain || return 1
 
     (prepare _test) \
+        && ( print_testmain.go $name > $testmain ) \
         && $GO -I_test -o _test/main.8 $testmain \
-        && $LD -L_test -o testmain _test/main.8 \
+        && $LD -L_test -o _bin/test _test/main.8 \
 
 }

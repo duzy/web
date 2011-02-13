@@ -1,0 +1,3 @@
+LD_LIBRARY_PATH=`pwd`/../MySQLClient
+
+export LD_LIBRARY_PATH
