@@ -35,12 +35,12 @@ func NewDatabase() (db Database) {
 
 func (db *cbindDatabase) Connect(params ...interface{}) (err os.Error) {
         if db.conn != nil {
-                err = os.NewError("Alread connected!")
+                err = newError("Alread connected!")
                 return
         }
 
         if len(params) < 4 {
-                err = os.NewError("Wrong number of parameters.")
+                err = newError("Wrong number of parameters.")
                 return
         }
 
@@ -55,7 +55,7 @@ func (db *cbindDatabase) Connect(params ...interface{}) (err os.Error) {
         }
 
         if db.conn == nil {
-                err = os.NewError("No database connection.")
+                err = newError("No database connection.")
                 return
         }
         return
@@ -69,13 +69,13 @@ func (db *cbindDatabase) Close() (err os.Error) {
 }
 
 func (db *cbindDatabase) Reconnect() (err os.Error) {
-        err = os.NewError("unimplemented Reconnect()")
+        err = newError("unimplemented Reconnect()")
         return
 }
 
 func (db *cbindDatabase) Query(sql string) (res QueryResult, err os.Error) {
         if db.conn == nil {
-                err = os.NewError("no database connection")
+                err = newError("no database connection")
                 return
         }
 
@@ -85,13 +85,13 @@ func (db *cbindDatabase) Query(sql string) (res QueryResult, err os.Error) {
 }
 
 func (db *cbindDatabase) Switch(dbnm string) (err os.Error) {
-        err = os.NewError("unimplemented Switch(db)")
+        err = newError("unimplemented Switch(db)")
         return
 }
 
 func (db *cbindDatabase) Prepare(sql string) (stmt SQLStatement, err os.Error) {
         if db.conn == nil {
-                err = os.NewError("no database connection")
+                err = newError("no database connection")
                 return
         }
 
@@ -106,10 +106,10 @@ func (db *cbindDatabase) Prepare(sql string) (stmt SQLStatement, err os.Error) {
 
 func (db *cbindDatabase) Escape(s string) string {
         if db.conn == nil {
-                //err = os.NewError("no database connection")
+                //err = newError("no database connection")
                 return ""
         }
-        //err = os.NewError("unimplemented Switch(db)")
+        //err = newError("unimplemented Switch(db)")
         // TODO:...
         return ""
 }
@@ -117,7 +117,7 @@ func (db *cbindDatabase) Escape(s string) string {
 
 func (s *cbindStatement) Execute(args ...interface{}) (res QueryResult, err os.Error) {
         if s.stmt == nil {
-                err = os.NewError("statement not inited")
+                err = newError("statement not inited")
                 return
         }
 
@@ -133,7 +133,7 @@ func (s *cbindStatement) Execute(args ...interface{}) (res QueryResult, err os.E
 
 func (s *cbindStatement) Close() (err os.Error) {
         if s.stmt == nil {
-                err = os.NewError("no inited statement")
+                err = newError("no inited statement")
                 return
         }
 
@@ -232,7 +232,7 @@ func (r *cbindQueryResult) GetRowCount() uint64 {
 
 func (r *cbindQueryResult) FetchRow() (row []interface{}, err os.Error) {
         if r.rs == nil {
-                err = os.NewError("no result")
+                err = newError("no result")
                 return
         }
 
@@ -246,7 +246,7 @@ func (r *cbindQueryResult) FetchRow() (row []interface{}, err os.Error) {
 
 func (r *cbindQueryResult) MoveFirst() {
         if r.rs == nil {
-                //err = os.NewError("no result")
+                //err = newError("no result")
                 return
         }
         //r.rs.RowSeek()

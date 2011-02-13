@@ -29,11 +29,11 @@ func formatMySQLError(i interface{}) (err os.Error) {
         switch o := i.(type) {
         case *mysqlDatabase:
                 if o.Errno != 0 {
-                        err = os.NewError(fmt.Sprintf("[DB][%v] %v",o.Errno,o.Error))
+                        err = newError(fmt.Sprintf("[DB][%v] %v",o.Errno,o.Error))
                 }
         case *mysqlStatement:
                 if o.Errno != 0 {
-                        err = os.NewError(fmt.Sprintf("[STMT][%v] %v",o.Errno,o.Error))
+                        err = newError(fmt.Sprintf("[STMT][%v] %v",o.Errno,o.Error))
                 }
         }
         return
@@ -110,7 +110,7 @@ func (qr *mysqlQueryResult) GetInsertId() uint64 { return qr.MySQLResult.InsertI
 func (qr *mysqlQueryResult) MoveFirst() { qr.MySQLResult.Reset() }
 func (qr *mysqlQueryResult) FetchRow() (row []interface{}, err os.Error) {
         row = qr.MySQLResult.FetchRow()
-        //if row == nil { err = os.NewError("no row fetched") }
+        //if row == nil { err = newError("no row fetched") }
         return
 }
 

@@ -96,7 +96,7 @@ func (req *Request) Session() *Session { return req.session; }
 
 func (request *Request) initSession() (err os.Error) {
         if request.app == nil {
-                err = os.NewError("no associated app")
+                err = newError("no associated app")
                 return
         }
 
@@ -113,7 +113,7 @@ func (request *Request) initSession() (err os.Error) {
         if c := request.Cookie(cookieSessionId); c != nil {
                 // TODO: check value of c.Name and c.Content
                 if request.app.config == nil {
-                        err = os.NewError("no app config")
+                        err = newError("no app config")
                         return
                 }
 
@@ -201,7 +201,7 @@ func ParseCookies(s string) (cookies []*Cookie) {
 // Produce a new web.App to talk to a session.
 func NewApp(m interface {}) (app *App, err os.Error) {
         if m == nil {
-                err = os.NewError("web.NewApp: Invalid parameter!")
+                err = newError("web.NewApp: Invalid parameter!")
                 return
         }
 
@@ -219,7 +219,7 @@ func NewApp(m interface {}) (app *App, err os.Error) {
                 cfg, err = LoadAppConfig(v)
                 if err == nil {
                         if cfg == nil {
-                                err = os.NewError(fmt.Sprintf("can't load app config '%v'", v))
+                                err = newError(fmt.Sprintf("can't load app config '%v'", v))
                                 return
                         }
                         // assign default FS persister if nil

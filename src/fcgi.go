@@ -207,7 +207,7 @@ func (h *RecordHeader) read(r io.Reader) (ok bool, err os.Error) {
         l, err := io.ReadFull(r, b)
         if l != 8 {
                 if err == nil {
-                        err = os.NewError(fmt.Sprintf("bad header read: %d", l))
+                        err = newError(fmt.Sprintf("bad header read: %d", l))
                 }
                 return
         }
@@ -234,7 +234,7 @@ func (h *RecordHeader) readContent(r io.Reader) (b []byte, err os.Error) {
                 if err != nil {
                         b = b[0:n]
                         if err == os.EOF {
-                                err = os.NewError(fmt.Sprintf("Short read %d bytes of %d", n, l))
+                                err = newError(fmt.Sprintf("Short read %d bytes of %d", n, l))
                         }
                         return
                 }
@@ -348,7 +348,7 @@ func initRequest(request *Request, params map[string]string) (err os.Error) {
 
         request.ProtoMajor, request.ProtoMinor, ok = parseHTTPVersion(request.Proto)
         if !ok {
-                err = os.NewError("malformed HTTP version: '"+request.Proto+"'")
+                err = newError("malformed HTTP version: '"+request.Proto+"'")
                 return
         }
 

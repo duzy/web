@@ -65,7 +65,7 @@ func (cgi *CGIModel) initRequest(rm RequestManager) (err os.Error) {
         request.Proto = cgi.Getenv("SERVER_PROTOCOL")
         request.ProtoMajor, request.ProtoMinor, ok = parseHTTPVersion(request.Proto)
         if !ok {
-                err = os.NewError("malformed HTTP version: "+request.Proto)
+                err = newError("malformed HTTP version: "+request.Proto)
                 return
         }
 
@@ -134,7 +134,7 @@ func (cgi *CGIModel) ProcessRequests(rm RequestManager) (err os.Error) {
         //fmt.Printf("request: %v\n", cgi.request)
 
         if cgi.request == nil {
-                err = os.NewError("bad CGI Request")
+                err = newError("bad CGI Request")
                 return
         }
 

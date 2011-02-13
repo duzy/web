@@ -26,15 +26,15 @@ func NewDatabase() (db Database) {
 
 func (db *mysqlDatabase) Connect(params ...interface{}) (err os.Error) {
         if len(params) != 4/*6*/ {
-                err = os.NewError("wrong connection parameters");
+                err = newError("wrong connection parameters");
                 return
         }
         var ok bool
         var netstr, laddrstr, raddrstr, username, password, database string
-        laddrstr, ok = params[0].(string); if !ok { err = os.NewError("not string parameter"); return }
-        username, ok = params[1].(string); if !ok { err = os.NewError("not string parameter"); return }
-        password, ok = params[2].(string); if !ok { err = os.NewError("not string parameter"); return }
-        database, ok = params[3].(string); if !ok { err = os.NewError("not string parameter"); return }
+        laddrstr, ok = params[0].(string); if !ok { err = newError("not string parameter"); return }
+        username, ok = params[1].(string); if !ok { err = newError("not string parameter"); return }
+        password, ok = params[2].(string); if !ok { err = newError("not string parameter"); return }
+        database, ok = params[3].(string); if !ok { err = newError("not string parameter"); return }
         raddrstr = "/var/run/mysqld/mysqld.sock"
         netstr = "unix"
         laddrstr = ""
