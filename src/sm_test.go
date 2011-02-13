@@ -35,19 +35,19 @@ func testSaveLoadSession(t *testing.T, cfg PersisterConfig) (sid string) {
         }
         {
                 s, err := LoadSession(sid, cfg)
-                if err != nil { t.Error(err); goto finish }
-                if s == nil { t.Error("nil session"); goto finish }
-                if s.Id() == "" { t.Error("Failed LoadSession()"); goto finish }
+                if err != nil { t.Errorf("LoadSession: %v", err); return }
+                if s == nil { t.Errorf("LoadSession: nil session"); return }
+                if s.Id() == "" { t.Errorf("LoadSession(): failed"); return }
                 if s.Get("test") != "test-value" {
-                        t.Error("Session props persist error")
-                        goto finish
+                        t.Errorf("Session props persist error")
+                        return
                 }
                 if s.Get("multiline") != "line1\nline2\nline3\nline4" {
-                        t.Error("Session props persist error")
-                        goto finish
+                        t.Errorf("Session props persist error")
+                        return
                 }
         }
-finish:
+
         return
 }
 

@@ -97,36 +97,36 @@ finish:
 func newDBSessionPersister(sid string, cfg *PersisterConfigDB) (p SessionPersister, err os.Error) {
         dbm := GetDBManager()
         db, err := dbm.GetDatabase(&(cfg.DatabaseConfig))
-        if err != nil { /* TODO: error */ goto finish }
+        if err != nil { /* TODO: error */ return }
 
-        sql := SQL_CREATE_SESSION_TABLE
-        _, err = db.Query(sql)
-        if err != nil { /* TODO: error */ goto finish }
-
-        //stmt, err := db.NewStatement()
-        //if err != nil { /* TODO: error */ goto finish }
+        _, err = db.Query(SQL_CREATE_SESSION_TABLE)
+        if err != nil { /* TODO: error */ return }
 
         stmt, err := db.Prepare(SQL_SELECT_SESSION_ROW)
-        if err != nil { /* TODO: error */ stmt.Close(); goto finish }
+        if err != nil { /* TODO: error */ stmt.Close(); return }
 
-        //stmt.BindParams(sid)
         res, err := stmt.Execute(sid)
-        if err != nil { /* TODO: error */ stmt.Close(); goto finish }
+        if err != nil { /* TODO: error */ stmt.Close(); return }
 
-        stmt.Close()
+        defer stmt.Close()
+
+        row, err := res.FetchRow()
+        res.Free()
+
+        if err != nil { return }
 
         props := ""
-        row, err := res.FetchRow()
-        if err != nil { goto finish }
         if row != nil {
                 props = fmt.Sprintf("%s", row[0])
-        } else { /* TODO: error */ }
+        } else {
+                err = newError("No session persisten record.")
+                return
+        }
 
         //fmt.Printf("sid=%s\nprops:\n%s", sid, props)
         
         p = &DBSessionPersister{ sid, db, bytes.NewBufferString(props) }
 
-finish:
         return
 }
 
@@ -270,6 +270,8 @@ func ReadSession(r io.Reader) (s *Session, err os.Error) {
                                 // FIXME: should break or just ignore?
                         }
                 }
+        } else if err != nil {
+                err = newError("parsing: " + err.String())
         }
         return
 }
@@ -296,7 +298,7 @@ func (s *Session) save(cfg PersisterConfig) (err os.Error) {
                 }
                 if p == nil {
                         //fmt.Fprintf(os.Stderr, "error: can't new a session\n")
-                        err = os.NewError("can't make session persister")
+                        err = newError("can't make session persister")
                         return
                 }
                 defer p.Close()

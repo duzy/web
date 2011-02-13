@@ -199,6 +199,6 @@ func (v *templateView) Prepare(request *Request) (err os.Error) {
 }
 
 func (v *templateView) Render(w RenderBuffer) (err os.Error) {
-        err = v.template.Execute( v.feed, w )
+        err = v.template.Execute( w, v.feed )
         return
 }

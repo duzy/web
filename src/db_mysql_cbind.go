@@ -6,18 +6,23 @@ import (
         "os"
 )
 
+/**
+ *  Implements Database
+ */
 type cbindDatabase struct {
         conn *mysql.Connection
 }
 
+/**
+ *  Implements SQLStatement and QueryResult
+ */
 type cbindStatement struct {
         stmt *mysql.Statement
 }
 
-type cbindStatementResult struct {
-        stmt *mysql.Statement
-}
-
+/**
+ *  Implements QueryResult
+ */
 type cbindQueryResult struct {
         rs *mysql.ResultSet
         fields []mysql.Field
@@ -112,7 +117,7 @@ func (db *cbindDatabase) Escape(s string) string {
 
 func (s *cbindStatement) Execute(args ...interface{}) (res QueryResult, err os.Error) {
         if s.stmt == nil {
-                err = os.NewError("no inited statement")
+                err = os.NewError("statement not inited")
                 return
         }
 
@@ -122,7 +127,7 @@ func (s *cbindStatement) Execute(args ...interface{}) (res QueryResult, err os.E
         }
 
         err = s.stmt.Execute()
-        res = QueryResult(&cbindStatementResult{ s.stmt })
+        res = QueryResult(s)
         return
 }
 
@@ -136,34 +141,51 @@ func (s *cbindStatement) Close() (err os.Error) {
         return
 }
 
-func (r *cbindStatementResult) GetFieldCount() uint {
+func (r *cbindStatement) GetFieldCount() uint {
         if r.stmt != nil {
-                //return r.stmt.FieldCount()
+                return r.stmt.FieldCount()
         }
         return 0
 }
 
-func (r *cbindStatementResult) GetFieldName(n int) string {
+func (r *cbindStatement) GetFieldName(n int) string {
+        if r.stmt != nil && r.stmt.Fields != nil {
+                if n < len(r.stmt.Fields) {
+                        return r.stmt.Fields[n].Name
+                }
+        }
         return ""
 }
 
-func (r *cbindStatementResult) GetAffectedRows() uint64 {
+func (r *cbindStatement) GetAffectedRows() uint64 {
+        if r.stmt != nil {
+                return r.stmt.AffectedRows()
+        }
         return 0
 }
 
-func (r *cbindStatementResult) GetInsertId() uint64 {
+func (r *cbindStatement) GetInsertId() uint64 {
+        if r.stmt != nil {
+                return r.stmt.InsertId()
+        }
         return 0
 }
 
-func (r *cbindStatementResult) GetRowCount() uint64 {
+func (r *cbindStatement) GetRowCount() uint64 {
+        if r.stmt != nil {
+                return r.stmt.NumRows()
+        }
         return 0
 }
 
-func (r *cbindStatementResult) FetchRow() (row []interface{}, err os.Error) {
+func (r *cbindStatement) FetchRow() (row []interface{}, err os.Error) {
+        if r.stmt != nil {
+                row, err = r.stmt.Fetch()
+        }
         return
 }
 
-func (r *cbindStatementResult) Free() (err os.Error) { return }
+func (r *cbindStatement) Free() (err os.Error) { return }
 
 func (r *cbindQueryResult) GetFieldCount() uint {
         if r.rs != nil {

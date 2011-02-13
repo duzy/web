@@ -53,10 +53,10 @@ func (cgi *CGIModel) initRequest(rm RequestManager) (err os.Error) {
 
         request.Header = make(map[string]string)
         for _, v := range os.Environ() {
-                //if 5 < len(v) && v[0:5] == "HTTP_" {
-                if kv := strings.Split(v, "=", 1); kv != nil {
+                if kv := strings.Split(v, "=", 2); kv != nil {
+                        // fmt.Printf("%v, %d\n", kv, len(kv))
                         // TODO: convert the uppercase names?
-                        request.Header[kv[0][5:]] = kv[1]
+                        request.Header[kv[0]] = kv[1]
                 }
         }
 

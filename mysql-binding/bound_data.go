@@ -53,7 +53,7 @@ func correctSize(t MysqlType, n int) (sz int) {
 		sz = unsafe.Sizeof(int64(0))
 
 	case MysqlTypeFloat:
-		sz = unsafe.Sizeof(float(0))
+		sz = unsafe.Sizeof(float32(0))
 
 	case MysqlTypeDouble:
 		sz = unsafe.Sizeof(float64(0))
