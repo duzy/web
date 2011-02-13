@@ -257,7 +257,7 @@ func TestViewTemplate(t *testing.T) {
  */
 
 func TestNewAppFromConfig(t *testing.T) {
-        a, err := NewApp("test_app.json")
+        a, err := NewApp("tst/test_app.json")
         if err != nil { t.Error(err); return }
         if a.config == nil { t.Error("app not configured"); return }
         if a.config.Title != "test app via json" {
@@ -319,7 +319,7 @@ func TestNewAppFromConfig(t *testing.T) {
 
 /*
 func TestCustomViewModelAndAppGetDatabase(t *testing.T) {
-        a, err := NewApp("test_app.json")
+        a, err := NewApp("tst/test_app.json")
         if err != nil { t.Error(err); return }
         if a.config == nil { t.Error("app not configured"); return }
 
