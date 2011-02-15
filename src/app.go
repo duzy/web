@@ -279,35 +279,8 @@ func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) 
 }
 
 func (m DefaultPathMatcher) PathMatch(p1 string, p2 string) (n int, sub string) {
-        /* // debug helper code
-        defer func() {
-                if e := recover(); e != nil {
-                        panic(fmt.Sprintf("PathMatch: %s <=> %s, %v", p1, p2, e))
-                }
-        }()
-         */
-
         n = PathMatchedNothing
 
-        /*
-        i := strings.Index(p2, p1) // find p1 in p2
-        if i == 0 { // p1 is the prefix of p2
-                l := len(p2) - len(p1)
-                if l == 0 { // full matched
-                        n = PathMatchedFull
-                } else if 0 < l { // p1(/edit) <=> p2(/edit/1)
-                        n = PathMatchedParent
-
-                        // For cases of: p1(/) <=> p2(/sync),
-                        //               p1(/buy/a/) <=> p2(/buy/a/1)
-                        if len(p1) == 0 || p1[len(p1)-1:len(p1)] == "/" { sub = "/" }
-
-                        sub += p2[len(p1):len(p1)+l]
-                } else if l < 0 {
-                        // unmatched
-                }
-        }
-         */
         if len(p1) <= len(p2) {
                 pre := p2[0:len(p1)]
                 if pre != p1 { /* matched nothing */ return }
