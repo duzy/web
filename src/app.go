@@ -9,8 +9,6 @@ import (
         "strings"
 )
 
-const cookieSessionId = "__web_cid" // use a special name for session id
-
 const (
         PathMatchedNothing = 0
         PathMatchedFull = 1 // the paths matched exactly
@@ -57,7 +55,6 @@ type Request struct {
         HttpCookie string
         
         app *App
-        session *Session
         cookies []*Cookie
         query map[string][]string // parsed query
 }
@@ -82,7 +79,6 @@ type Cookie struct {
 // Indicate a CGI web session, also holds parameters of a request.
 type App struct {
         model AppModel
-        config *AppConfig
         handlers map[string]RequestHandler
         pathMatcher PathMatcher
         requests map[string]*Request
@@ -90,60 +86,6 @@ type App struct {
 
 func (f FuncHandler) HandleRequest(request *Request, response *Response) (err os.Error) {
         return f(request, response)
-}
-
-func (req *Request) Session() *Session { return req.session; }
-
-func (request *Request) initSession() (err os.Error) {
-        if request.app == nil {
-                err = newError("no associated app")
-                return
-        }
-
-        appScriptName := request.ScriptName
-
-        if c := request.Cookie(cookieSessionId); c != nil {
-                if c.Path == "" {
-                        c.Path = appScriptName
-                }
-        }
-
-        shouldMakeNewSession := true
-
-        if c := request.Cookie(cookieSessionId); c != nil {
-                // TODO: check value of c.Name and c.Content
-                if request.app.config == nil {
-                        err = newError("no app config")
-                        return
-                }
-
-                sec, e := LoadSession(c.Content, request.app.config.Persister)
-                if e == nil {
-                        shouldMakeNewSession = false
-                        request.session = sec
-                } else {
-                        // TODO: log errors
-                        //panic(err)
-                }
-        }
-
-        if shouldMakeNewSession {
-                request.session = NewSession()
-                // FIXME: app.cookies may be not empty since it's
-                //        returned by ParseCookies.
-                request.cookies = append(request.cookies, &Cookie{
-                Name: cookieSessionId,
-                Content: request.session.Id(),
-                Path: request.ScriptName,
-                })
-        }
-
-        if request.session == nil { panic("web: no session") }
-
-        // TODO: use hidden form for session state management
-        //       for the case that the client did not support
-        //       cookies. Also for security reason?
-        return
 }
 
 func (request *Request) Cookies() []*Cookie { return request.cookies }
@@ -210,61 +152,7 @@ func NewApp(m interface {}) (app *App, err os.Error) {
                 app = new(App)
                 err = app.initFromModel(v)
                 if err != nil { app = nil }
-        case *AppConfig:
-                app = new(App)
-                err = app.initFromConfig(v)
-                if err != nil { app = nil }
-        case string: // app config file
-                var cfg *AppConfig
-                cfg, err = LoadAppConfig(v)
-                if err == nil {
-                        if cfg == nil {
-                                err = newError(fmt.Sprintf("can't load app config '%v'", v))
-                                return
-                        }
-                        // assign default FS persister if nil
-                        if cfg.Persister == nil {
-                                cfg.Persister = defaultPersisterConfigFS
-                        }
-                        app = new(App)
-                        err = app.initFromConfig(cfg)
-                        if err != nil { app = nil }
-                }
         }
-        return
-}
-
-func newAppModelFromAppConfig(cfg *AppConfig) (am AppModel, err os.Error) {
-        switch cfg.Model {
-        case "CGI": am, err = NewCGIModel()
-        }
-        return
-}
-
-func newAppConfigForAppModel(am AppModel) (config *AppConfig) {
-        config = new(AppConfig)
-        switch am.(type) {
-        case *CGIModel: config.Model = "CGI"
-        }
-        config.Persister = PersisterConfig(&PersisterConfigFS{ Location: "/tmp/web/sessions", })
-        return
-}
-
-func (app *App) initFromConfig(cfg *AppConfig) (err os.Error) {
-        app.model, err = newAppModelFromAppConfig(cfg)
-        if app.model == nil {
-                error("initFromConfig: invalid app model '%s'", cfg.Model)
-                goto finish
-        }
-
-        app.config = cfg
-
-        app.handlers = make(map[string]RequestHandler)
-        app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
-        app.requests = make(map[string]*Request)
-
-        // TODO: init database
-finish:
         return
 }
 
@@ -272,7 +160,6 @@ func (app *App) initFromModel(am AppModel) (err os.Error) {
         app.model = am
         app.handlers = make(map[string]RequestHandler)
         app.pathMatcher = DefaultPathMatcher(PathMatchedNothing)
-        app.config = newAppConfigForAppModel(app.model)
         app.requests = make(map[string]*Request)
         return
 }
@@ -312,31 +199,7 @@ func (res *Response) writeHeader(w io.Writer) (err os.Error) {
         return
 }
 
-/**
- *  Get database via the name -- specified in the config file like this:
- *    "databases": {
- *        "db-name": {
- *            ...
- *        }
- *    }
- */
-func (app *App) GetDatabase(name string) (db Database, err os.Error) {
-        dbm := GetDBManager()
-        for n, cfg := range app.config.Databases {
-                if n == name {
-                        db, err = dbm.GetDatabase(cfg)
-                        break
-                }
-        }
-        return
-}
-
 func (app *App) Exec() (err os.Error) {
-        defer func() {
-                dbm := GetDBManager()
-                dbm.CloseAll() // close all databases
-        }()
-
         err = app.model.ProcessRequests(app)
         if err != nil {
                 // ....
@@ -349,7 +212,6 @@ func (app *App) GetRequest(id string) (request *Request, err os.Error) {
         request = app.requests[id]
         if request == nil {
                 request = &Request{}
-                request.initSession()
                 app.requests[id] = request
         }
         request.app = app
@@ -360,13 +222,6 @@ type noCloseReader struct { io.Reader }
 func (c noCloseReader) Close() os.Error { return nil }
 
 func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) {
-        defer func() {
-                if app.config == nil { error("config: <nil>") }
-                if req.session != nil {
-                        err = req.session.save(app.config.Persister)
-                }
-        }()
-
         req.query, err = http.ParseQuery(req.QueryString)
         if err != nil {
                 /* TODO: log error */
@@ -382,10 +237,6 @@ func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) 
         response.Header = make(map[string]string)
         response.Body = noCloseReader{ contentBuffer }
         response.BodyWriter = contentBuffer
-
-        if c := req.Cookie(cookieSessionId); c != nil {
-                response.cookies = append(response.cookies, c)
-        }
 
         handled := false
         for k, h := range app.handlers {

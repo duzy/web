@@ -373,12 +373,6 @@ func initRequest(request *Request, params map[string]string) (err os.Error) {
         request.HttpCookie = params["HTTP_COOKIE"]
         request.cookies = ParseCookies(request.HttpCookie)
 
-        if request.session != nil { return }
-        if err = request.initSession(); err != nil {
-                logger.Printf("error: request.initSession: '%v'", err)
-                //return
-        }
-
         return
 }
 
@@ -406,13 +400,7 @@ func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, h *RecordHea
         var request *Request
         request, err = rm.GetRequest(fmt.Sprintf("%v", uint16(h.RequestId)))
         if err == nil && request != nil {
-                if request.session == nil {
-                        // TODO: init special session for FCGI, no FS and DB session storage
-                        if err = request.initSession(); err != nil {
-                                logger.Printf("error: request.initSession: '%v'", err)
-                                //return
-                        }
-                }
+                logger.Printf("ProcessRequest: %v\n", h.RequestId)
 
                 var response *Response
                 response, err = rm.ProcessRequest(request)

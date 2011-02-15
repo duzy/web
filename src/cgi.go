@@ -89,10 +89,6 @@ func (cgi *CGIModel) initRequest(rm RequestManager) (err os.Error) {
         request.HttpCookie = cgi.Getenv("HTTP_COOKIE")
         request.cookies = ParseCookies(request.HttpCookie)
 
-        if err = request.initSession(); err != nil {
-                return
-        }
-
         cgi.request = request
         return
 }

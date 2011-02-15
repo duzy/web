@@ -2,33 +2,13 @@
 
 . funs.sh
 
-#./tst/make-mysql.sh > /dev/null || {
-#    echo "..."
-#    exit 1
-#}
-
-s="cbind"
-if [[ "xx" == "x$sx" ]] ; then
-    w=`git --work-tree=MySQL --git-dir=MySQL/.git config remote.origin.url`
-    if [[ "x$w" == "xhttps://github.com/thoj/Go-MySQL-Client-Library.git" ]] ; then
-        s=thoj
-    else
-        s=philio
-    fi
-fi
-
 go_tests=`ls src/*_test.go`
 #go_tests="src/db_test.go"
 go_files="
   src/app.go
-  src/appcfg.go
   src/cgi.go
-  src/db.go
-  src/db_mysql_$s.go
-  src/dbmgr.go
   src/err.go
   src/fcgi.go
-  src/sm.go
   src/viewmgr.go
 "
 
