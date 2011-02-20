@@ -1,13 +1,26 @@
-# TODO: use gomake for building
+include $(GOROOT)/src/Make.inc
+
+DB_BACKEND := cbind
+
+TARG = ds/web
+CGOFILES =
+GOFILES = \
+  app.go \
+  cgi.go \
+  err.go \
+  fcgi.go \
+  viewmgr.go \
+
+CGO_CFLAGS = 
+CGO_LDFLAGS = -L. -lmysql_wrap
+
+PREREQ += ../MySQLClient/libmysql_wrap.so
 
 LD_LIBRARY_PATH += $(shell pwd)/../MySQLClient
 
 export LD_LIBRARY_PATH
 
-all: remake test
+include $(GOROOT)/src/Make.pkg
 
-remake: make.sh ; @./$<
-
-test: _bin/test ; @./$<
-
-_bin/test: make.sh ; @./$<
+../MySQLClient/libmysql_wrap.so: ../MySQLClient/Makefile
+	cd ../MySQLClient && gomake
