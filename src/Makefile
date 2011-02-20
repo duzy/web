@@ -2,18 +2,13 @@ include $(GOROOT)/src/Make.inc
 
 DB_BACKEND := cbind
 
-TARG = web
+TARG = ds/web
 CGOFILES =
 GOFILES = \
   app.go \
-  appcfg.go \
   cgi.go \
-  db.go \
-  db_mysql_$(DB_BACKEND).go \
-  dbmgr.go \
   err.go \
   fcgi.go \
-  sm.go \
   viewmgr.go \
 
 CGO_CFLAGS = 

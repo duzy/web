@@ -1,7 +1,7 @@
 package main
 
 import (
-        "./_obj/web"
+        "ds/web"
         //"io"
         "os"
         "fmt"
