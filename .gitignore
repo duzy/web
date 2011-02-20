@@ -10,3 +10,5 @@ _cgo_*
 8.out
 testmain
 MySQL
+examples/fcgi_page/fcgi_page
+examples/fcgi_simple/fcgi_test
