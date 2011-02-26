@@ -7,12 +7,9 @@ import (
         "fmt"
         "http"
         "io"
-        //"io/ioutil"
-        "log"
         "os"
         "runtime"
         "strconv"
-        //"strings"
         "syscall"
 )
 
@@ -22,8 +19,6 @@ type FCGIModel struct {
 
 // TODO: fix this '= 0'
 var flagCGI int = 2 // 0 = Unchecked, 1 = CGI, 2 = FCGI
-
-var logger *log.Logger
 
 func NewFCGIModel() (am AppModel, err os.Error) {
         if flagCGI == 0 {
@@ -295,7 +290,7 @@ func getNVValue(b []byte, size int) (v string, ob []byte) {
         return
 }
 
-func parseNameValuePares(b []byte) (params map [string]string) {
+func parseNameValuePairs(b []byte) (params map [string]string) {
         var kl, vl int
         var k, v string
         params = make(map[string]string)
@@ -384,7 +379,32 @@ func initRequest(request *Request, params map[string]string) (err os.Error) {
         return
 }
 
-func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, h *RecordHeader) (err os.Error) {
+func (fcgi *FCGIModel) processParamsRecord(rm RequestManager, h *RecordHeader, content []byte) (err os.Error) {
+        params := parseNameValuePairs(content)
+        //logger.Printf("params: %v\n", params)
+
+        var request *Request
+        request, err = rm.GetRequest(fmt.Sprintf("%v", uint16(h.RequestId)))
+        if request == nil {
+                logger.Printf("no request: %v", h.RequestId)
+                return
+        }
+
+        if err != nil {
+                logger.Printf("error: %v", err)
+                return
+        }
+        
+        err = initRequest(request, params)
+        if err != nil {
+                logger.Printf("error: %v", err)
+                return
+        }
+
+        return
+}
+
+func (fcgi *FCGIModel) processRequestAndSendResult(out io.Writer, rm RequestManager, h *RecordHeader) (err os.Error) {
         logger.Printf("sending result: %v\n", h.RequestId)
 
         hh := &RecordHeader{
@@ -430,6 +450,23 @@ func (fcgi *FCGIModel) sendResult(out io.Writer, rm RequestManager, h *RecordHea
         return
 }
 
+func (fcgi *FCGIModel) sendCompleteRecord(out io.Writer, h *RecordHeader) (err os.Error) {
+        hh := &RecordHeader{
+        Version: h.Version,
+        Type: FCGI_END_REQUEST,
+        RequestId: h.RequestId,
+        ContentLength: 8,
+        PaddingLength: 0,
+        }
+        er := &EndRequestBody{
+        AppStatus: 0,
+        ProtocolStatus: FCGI_REQUEST_COMPLETE,
+        }
+        if err = binary.Write(out, binary.BigEndian, hh); err != nil { return }
+        if err = binary.Write(out, binary.BigEndian, er); err != nil { return }
+        return
+}
+
 func (fcgi *FCGIModel) processSession(rm RequestManager, fd int) {
         //logger.Printf("FCGI_WEB_SERVER_ADDRS: %s\n", os.Getenv("FCGI_WEB_SERVER_ADDRS"))
 
@@ -470,44 +507,15 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, fd int) {
                         //logger.Printf("BeginRequest: %v\n", rec)
                 case FCGI_PARAMS:
                         if 0 < h.ContentLength {
-                                params := parseNameValuePares(content)
-                                //logger.Printf("params: %v\n", params)
-
-                                var request *Request
-                                request, err = rm.GetRequest(fmt.Sprintf("%v", uint16(h.RequestId)))
-                                if request == nil {
-                                        logger.Printf("no request: %v", h.RequestId)
-                                        return
-                                }
+                                err = fcgi.processParamsRecord(rm, h, content)
                                 if err != nil {
-                                        logger.Printf("error: %v", err)
                                         return
-                                }
-
-                                err = initRequest(request, params)
-                                if err != nil {
-                                        logger.Printf("error: %v", err)
-                                        //return
                                 }
                         }
                 case FCGI_STDIN:
                         if h.ContentLength == uint16(0) {
-                                fcgi.sendResult(f, rm, h)
-
-                                hh := &RecordHeader{
-                                Version: h.Version,
-                                Type: FCGI_END_REQUEST,
-                                RequestId: h.RequestId,
-                                ContentLength: 8,
-                                PaddingLength: 0,
-                                }
-                                er := &EndRequestBody{
-                                AppStatus: 0,
-                                ProtocolStatus: FCGI_REQUEST_COMPLETE,
-                                }
-                                if err = binary.Write(f, binary.BigEndian, hh); err != nil { return }
-                                if err = binary.Write(f, binary.BigEndian, er); err != nil { return }
-
+                                fcgi.processRequestAndSendResult(f, rm, h)
+                                fcgi.sendCompleteRecord(f, h)
                                 logger.Printf("request ended\n")
                         } else {
                                 logger.Printf("TODO: obtain data from the web server\n")
@@ -521,12 +529,7 @@ func (fcgi *FCGIModel) processSession(rm RequestManager, fd int) {
 }
 
 func (fcgi *FCGIModel) ProcessRequests(rm RequestManager) (err os.Error) {
-        logFile, _ := os.Open("/tmp/a.go.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
-        logger = log.New(logFile, "", log.Lshortfile|log.Ltime)
-
         logger.Printf("=================================\n")
-        logger.Printf("ARGS: %v\n", os.Args)
-
         logger.Printf("Listenning...\n")
         for {
                 fd, _, ec := syscall.Accept(FCGI_LISTENSOCK_FILENO)

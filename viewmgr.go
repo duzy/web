@@ -33,6 +33,10 @@ type View interface {
 }
 
 /**
+ Page is a RequestHandler and is designed for handling http requests.
+ 
+ A page is a view and structured by sub-views.
+
  Usage:
 
  feed := new(MyFeedOrViewModel)
@@ -112,7 +116,6 @@ func (p *HtmlPage) HandleRequest(request *Request, response *Response) (err os.E
 }
 
 type viewStringer struct { PrepareableRenderable }
-
 func (v viewStringer) String() string {
         b := bytes.NewBuffer(make([]byte, 0, 512))
         err := v.Render(RenderBuffer{ b })

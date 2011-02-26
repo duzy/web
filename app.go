@@ -5,9 +5,20 @@ import (
         "fmt"
         "http"
         "io"
+        "log"
         "os"
         "strings"
 )
+
+// Internal used logger.
+var logger *log.Logger
+
+func init() {
+        logFile, _ := os.Open("/tmp/ds.web.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+        logger = log.New(logFile, "", log.Lshortfile|log.Ltime)
+}
+
+//func SetLogger()
 
 const (
         PathMatchedNothing = 0
@@ -15,27 +26,20 @@ const (
         PathMatchedParent = 2 // both paths has the same parent: /edit, /edit/1, /edit/2
 )
 
-// Responsible to check two paths to see if they are identical.
-// TODO: think about paths like '/edit/*'
-type PathMatcher interface {
-        PathMatch(p1 string, p2 string) (n int, sub string)
-}
-
-// The default method of matching two path: matched if equal
-type DefaultPathMatcher int
-
-// Make response to a request.
+// RequestHandler make response to a request.
 type RequestHandler interface {
         HandleRequest(request *Request, response *Response) (err os.Error)
 }
 
+// SubpathHandler handle subpath requests. 
 type SubpathHandler interface {
         HandleSubpath(subpath string, request *Request) bool
 }
 
-// Use FuncHandler to wrap a func as a web.Handler.
+// FuncHandler is used to wrap a typical func as a web.RequestHandler.
 type FuncHandler func(request *Request, response *Response) (err os.Error)
 
+// Manage persistent multiple requests.
 type RequestManager interface {
         GetRequest(id string) (request *Request, err os.Error)
         ProcessRequest(req *Request) (response *Response, err os.Error)
@@ -46,6 +50,7 @@ type AppModel interface {
         ProcessRequests(rp RequestManager) os.Error
 }
 
+// Request derived from http.Request and represents the web request.
 type Request struct {
         http.Request
 
@@ -59,14 +64,17 @@ type Request struct {
         query map[string][]string // parsed query
 }
 
+// Response derived from http.Response and represents the web response.
 type Response struct {
         http.Response
+
         BodyWriter io.Writer
 
         app *App
         cookies []*Cookie
 }
 
+// Cookie represents the http cookies.
 type Cookie struct {
         Name string
         Content string // TODO: should be named as Value
@@ -83,6 +91,18 @@ type App struct {
         pathMatcher PathMatcher
         requests map[string]*Request
 }
+
+// Responsible for checking two paths to see if they are identical.
+// TODO: think about paths like '/edit/*'
+type PathMatcher interface {
+        PathMatch(p1 string, p2 string) (n int, sub string)
+}
+
+// The default method of matching two path: matched if equal
+type DefaultPathMatcher int
+
+// RegexPathMatcher match paths using regex expression.
+type RegexPathMatcher int
 
 func (f FuncHandler) HandleRequest(request *Request, response *Response) (err os.Error) {
         return f(request, response)
@@ -140,7 +160,7 @@ func ParseCookies(s string) (cookies []*Cookie) {
         return
 }
 
-// Produce a new web.App to talk to a session.
+// Create a new web.App to talk to a http session.
 func NewApp(m interface {}) (app *App, err os.Error) {
         if m == nil {
                 err = newError("web.NewApp: Invalid parameter!")
@@ -211,8 +231,9 @@ func (app *App) Exec() (err os.Error) {
 
 func (app *App) GetRequest(id string) (request *Request, err os.Error) {
         // TODO: multiple requests management
-        request = app.requests[id]
-        if request == nil {
+        var found bool
+        request, found = app.requests[id]
+        if !found || request == nil {
                 request = &Request{}
                 app.requests[id] = request
         }
@@ -223,6 +244,7 @@ func (app *App) GetRequest(id string) (request *Request, err os.Error) {
 type noCloseReader struct { io.Reader }
 func (c noCloseReader) Close() os.Error { return nil }
 
+// Process a single incoming request.
 func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) {
         req.query, err = http.ParseQuery(req.QueryString)
         if err != nil {
@@ -249,6 +271,7 @@ func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) 
                                         continue
                                 }
                         }
+
                         err = h.HandleRequest(req, response)
                         if err != nil {
                                 // TODO: error handling...
@@ -300,5 +323,10 @@ func (m DefaultPathMatcher) PathMatch(p1 string, p2 string) (n int, sub string) 
                         sub += p2[len(p1):len(p1)+l]
                 }
         }
+        return
+}
+
+func (m RegexPathMatcher) PathMatch(p1 string, p2 string) (n int, sub string) {
+        // TODO: implement this...
         return
 }
