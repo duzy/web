@@ -51,12 +51,12 @@ func (cgi *CGIModel) initRequest(rm RequestManager) (err os.Error) {
 
         //scheme + "://" + cgi.Getenv("SERVER_NAME") + 
 
-        request.Header = make(map[string]string)
+        request.Header = http.Header(make(map[string][]string))
         for _, v := range os.Environ() {
                 if kv := strings.Split(v, "=", 2); kv != nil {
                         // fmt.Printf("%v, %d\n", kv, len(kv))
                         // TODO: convert the uppercase names?
-                        request.Header[kv[0]] = kv[1]
+                        request.Header.Set(kv[0], kv[1])
                 }
         }
 

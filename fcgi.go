@@ -334,8 +334,16 @@ func printErrorCallStack(err interface{}, str io.Writer) {
         fmt.Fprintf(str, `</p>`)
 }
 
+func makeHttpHeader(m map[string]string) (h http.Header) {
+        h = http.Header(make(map[string][]string))
+        for k, v := range m {
+                h.Set(k, v)
+        }
+        return
+}
+
 func initRequest(request *Request, params map[string]string) (err os.Error) {
-        request.Header = params
+        request.Header = makeHttpHeader(params)
 
         request.Method = params["REQUEST_METHOD"]
         request.Proto = params["SERVER_PROTOCOL"]

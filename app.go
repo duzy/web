@@ -1,11 +1,11 @@
 package web
 
 import (
-        "os"
-        "io"
+        "bytes"
         "fmt"
         "http"
-        "bytes"
+        "io"
+        "os"
         "strings"
 )
 
@@ -191,8 +191,10 @@ func (res *Response) writeHeader(w io.Writer) (err os.Error) {
                 fmt.Fprintf(w, "Set-Cookie: %s\n", v.String())
         }
 
-        for k, v := range res.Header {
-                fmt.Fprintf(w, "%s: %s\n", k, v)
+        for k, v := range res.Header { // map[string][]string
+                for _, vi := range v {
+                        fmt.Fprintf(w, "%s: %s\n", k, vi)
+                }
         }
 
         fmt.Fprintf(w, "\n")
@@ -234,7 +236,7 @@ func (app *App) ProcessRequest(req *Request) (response *Response, err os.Error) 
         response = &Response{}
         response.app = app
         response.cookies = make([]*Cookie, 0, 8)
-        response.Header = make(map[string]string)
+        response.Header = http.Header(make(map[string][]string))
         response.Body = noCloseReader{ contentBuffer }
         response.BodyWriter = contentBuffer
 

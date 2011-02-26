@@ -59,7 +59,7 @@ func TestFuncHandler(t *testing.T) {
         if err != nil { t.Error(err); return }
 
         a.Handle("/test", FuncHandler(func(request *Request, response *Response) (err os.Error) {
-                response.Header["Content-Type"] = "text/html"
+                response.Header.Set("Content-Type", "text/html")
                 if request.HttpCookie != "foo=bar" {
                         t.Errorf("request.HttpCookie not correct: %v", request.HttpCookie)
                 }

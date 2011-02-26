@@ -106,7 +106,7 @@ func (vm *Page) HandleSubpath(subpath string, request *Request) (handled bool) {
  */
 
 func (p *HtmlPage) HandleRequest(request *Request, response *Response) (err os.Error) {
-        response.Header["Content-Type"] = "text/html"
+        response.Header.Set("Content-Type", "text/html")
         err = (*Page)(p).HandleRequest(request, response)
         return
 }
