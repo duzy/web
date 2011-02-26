@@ -26,8 +26,8 @@ type customViewModel struct {
 }
 
 func newTestAppModel() (m *testAppModel) {
-        buffer := bytes.NewBufferString("")
-        reader := bytes.NewBufferString("")
+        buffer := bytes.NewBuffer(make([]byte, 0, 128))
+        reader := bytes.NewBuffer(make([]byte, 0, 128))
         cgi := &CGIModel{ make(map[string]string), nil, buffer } //NewCGIModel()
         m = &testAppModel{ cgi, buffer, reader }
         m.Setenv("SERVER_PROTOCOL", "HTTP/1.1")

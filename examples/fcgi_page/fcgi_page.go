@@ -2,7 +2,6 @@ package main
 
 import (
         "ds/web"
-        //"io"
         "os"
         "fmt"
 )
@@ -22,7 +21,7 @@ func (feed *ContentFeed) Prepare(request *web.Request) (err os.Error) {
 }
 
 func (feed *TestPageFeed) Prepare(request *web.Request) (err os.Error) {
-        //feed.content.Prepare(request)
+        //feed.CONTENT.Prepare(request)
         return
 }
 
@@ -44,15 +43,18 @@ func main() {
                 return
         }
 
-        contentFeed := &ContentFeed{ 0 }
+        contentFeed := &ContentFeed{ COUNTER: 0 }
         content, err := web.NewTemplateFromString("counter: {COUNTER}", contentFeed)
         if err != nil {
                 fmt.Printf("error: %v\n", err)
                 return
         }
 
-        feed := &TestPageFeed{ "FCGI test page", content }
-        page, err := web.NewHtmlPage("page.tpl", feed)
+        pageFeed := &TestPageFeed{
+        TITLE: "FCGI test page",
+        CONTENT: content,
+        }
+        page, err := web.NewHtmlPage("page.tpl", pageFeed)
         if err != nil {
                 fmt.Printf("error: %v\n", err)
                 return

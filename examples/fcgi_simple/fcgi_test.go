@@ -2,16 +2,15 @@ package main
 
 import (
         "ds/web"
-        //"io"
-        "os"
         "fmt"
+        "os"
 )
 
 var counter = 0
 
 func hello(request *web.Request, response *web.Response) (err os.Error) {
         counter += 1
-        response.Header["Content-Type"] = "text/html"
+        response.Header.Set("Content-Type", "text/html")
         fmt.Fprintf(response.BodyWriter, "<b>test</b>: <small>num=%d</small><br/>\n", counter)
 
         // if request.Session() == nil {
