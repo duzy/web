@@ -36,12 +36,19 @@ go_tests="
   mysql_philio_test.go
 "
 go_files="
+  MySQL/const.go
+  MySQL/convert.go
+  MySQL/error.go
+  MySQL/handler.go
   MySQL/mysql.go
-  MySQL/mysql_const.go
-  MySQL/mysql_error.go
-  MySQL/mysql_result.go
-  MySQL/mysql_packet.go
-  MySQL/mysql_statement.go
+  MySQL/mysql_test.go
+  MySQL/packet.go
+  MySQL/password.go
+  MySQL/reader.go
+  MySQL/result.go
+  MySQL/statement.go
+  MySQL/types.go
+  MySQL/writer.go
 "
 fi
 
