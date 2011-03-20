@@ -1,6 +1,6 @@
-[submodule "apps/dusell"]
-	path = apps/dusell
-	url = ../web/apps/dusell.git
 [submodule "apps/duzy.info"]
 	path = apps/duzy.info
 	url = ../web/apps/duzy.info.git
+[submodule "apps/dusell"]
+	path = apps/dusell
+	url = ../web/apps/dusell.git
