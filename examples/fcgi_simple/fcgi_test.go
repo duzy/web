@@ -1,7 +1,7 @@
 package main
 
 import (
-        "ds/web"
+        "github.com/duzy/web"
         "fmt"
         "os"
 )
