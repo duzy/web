@@ -6,7 +6,7 @@ import (
         "fmt"
         "flag"
         "bytes"
-        "./_obj/web"
+        "github.com/duzy/web"
 )
 
 var counters map[string]int = make(map[string]int)
